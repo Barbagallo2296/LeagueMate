@@ -1,0 +1,1434 @@
+{
+  "info": {
+    "_postman_id": "b3c4d5e6-a1b2-3c4d-5e6f-7a8b9c0d1e2f",
+    "name": "LeagueMate-API",
+    "description": "Collezione completa per il Project Work UF14 - LeagueMate API.\n\nAutenticazione con Spring Authorization Server: la chiamata '1. Auth > POST Login' restituisce un access token opaco (15 minuti) e un refresh token (7 giorni), salvati automaticamente nelle variabili di collection access_token e refresh_token. Tutte le altre richieste usano access_token. Quando scade, 'POST Refresh Token' ottiene una nuova coppia (il refresh token precedente viene invalidato) e aggiorna le variabili.\n\nOrdine consigliato per una prova completa: Login -> Create Team -> Create Tournament -> Register Team to Tournament -> Generate Rounds -> Tournament Rounds -> Update Match Result -> Standings -> Stats -> Refresh Token -> Logout.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "POST Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"manuel22\",\n    \"email\": \"manuel@leaguemate.com\",\n    \"password\": \"password123\",\n    \"firstName\": \"Manuel\",\n    \"lastName\": \"Barbagallo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "",
+                  "pm.test(\"Token emessi\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(response.access_token).to.be.a('string').and.not.empty;",
+                  "    pm.expect(response.refresh_token).to.be.a('string').and.not.empty;",
+                  "    pm.expect(response.token_type).to.eql('Bearer');",
+                  "});",
+                  "",
+                  "if (response.access_token) {",
+                  "    pm.collectionVariables.set(\"access_token\", response.access_token);",
+                  "    pm.collectionVariables.set(\"refresh_token\", response.refresh_token);",
+                  "    console.log(\"Access token e refresh token salvati nelle variabili di collection.\");",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"manuel22\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "",
+                  "pm.test(\"Token emessi\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(response.access_token).to.be.a('string').and.not.empty;",
+                  "    pm.expect(response.refresh_token).to.be.a('string').and.not.empty;",
+                  "    pm.expect(response.token_type).to.eql('Bearer');",
+                  "});",
+                  "",
+                  "if (response.access_token) {",
+                  "    pm.collectionVariables.set(\"access_token\", response.access_token);",
+                  "    pm.collectionVariables.set(\"refresh_token\", response.refresh_token);",
+                  "    console.log(\"Access token e refresh token salvati nelle variabili di collection.\");",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh_token\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Rinnova la coppia di token con il refresh token salvato. Il refresh token usato viene invalidato (rotazione): un secondo utilizzo restituisce 401."
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "noauth"
+      }
+    },
+    {
+      "name": "2. Tournaments",
+      "item": [
+        {
+          "name": "POST Create Tournament",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Grand Line Cup\",\n    \"season\": \"2026/2027\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tournaments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET All Tournaments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments?page=0&size=20&sort=id,asc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "id,asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET My Tournaments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/mine",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "mine"
+              ]
+            },
+            "description": "Tornei di cui l'utente autenticato e' organizzatore."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournament by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournaments by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/status/DRAFT?page=0&size=20&sort=id,asc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "status",
+                "DRAFT"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "id,asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Register Team to Tournament",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/register-team/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "register-team",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Registered Teams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/teams",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "teams"
+              ]
+            },
+            "description": "Squadre iscritte al torneo."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Generate Rounds",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/generate-rounds",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "generate-rounds"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournament Rounds",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/rounds",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "rounds"
+              ]
+            },
+            "description": "Calendario completo: giornate con le rispettive partite."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournament Standings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/standings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "standings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Tournament",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Grand Line Cup - Updated\",\n    \"season\": \"2026/2027\",\n    \"pointsForWin\": 3,\n    \"pointsForDraw\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Tournament",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournament Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "stats"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST Complete Tournament",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "complete"
+              ]
+            },
+            "description": "Chiude il torneo (ACTIVE -> COMPLETED). Restituisce 409 finche' restano partite da giocare."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Teams",
+      "item": [
+        {
+          "name": "POST Create Team",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Straw Hat FC\",\n    \"logoUrl\": \"https://images.com/luffy.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/teams",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET All Teams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teams?page=0&size=20&sort=name,asc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Team by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teams/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Team",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Straw Hat FC Updated\",\n    \"logoUrl\": \"https://images.com/luffy-new.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/teams/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Team",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teams/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Matches",
+      "item": [
+        {
+          "name": "GET Matches by Round ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/matches/round/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "round",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update Match Result",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"homeScore\": 3,\n    \"awayScore\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/matches/1/result",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "1",
+                "result"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Team Members",
+      "item": [
+        {
+          "name": "POST Add Team Member",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": 1,\n    \"teamRole\": \"CAPTAIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/teams/1/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams",
+                "1",
+                "members"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Team Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teams/1/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams",
+                "1",
+                "members"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Remove Team Member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teams/1/members/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams",
+                "1",
+                "members",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Tournament Organizers (ManyToMany)",
+      "item": [
+        {
+          "name": "POST Add Organizer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/organizers/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "organizers",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournament Organizers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/organizers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "organizers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE Remove Organizer",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/1/organizers/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "1",
+                "organizers",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Users",
+      "description": "Modulo obbligatorio per la gestione degli Utenti.",
+      "item": [
+        {
+          "name": "GET Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Dati dell'utente autenticato, ricavati dall'access token. Accessibile a qualsiasi utente autenticato."
+          },
+          "response": []
+        },
+        {
+          "name": "GET All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users?page=0&size=20&sort=id,asc",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                },
+                {
+                  "key": "sort",
+                  "value": "id,asc"
+                }
+              ]
+            },
+            "description": "Elenco completo degli utenti. Riservato al ruolo ADMIN."
+          },
+          "response": []
+        },
+        {
+          "name": "GET User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2"
+              ]
+            },
+            "description": "Dettaglio di un singolo utente. Accessibile a qualsiasi utente autenticato."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User Role",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/2/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2",
+                "role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"role\": \"ORGANIZER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Promozione o declassamento di un utente. Riservato al ruolo ADMIN. Il declassamento dell'ultimo ADMIN rimasto viene rifiutato con 409 Conflict."
+          },
+          "response": []
+        },
+        {
+          "name": "GET User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/1/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "1",
+                "profile"
+              ]
+            },
+            "description": "Profilo utente, collegato a User da una relazione @OneToOne. Accessibile a qualsiasi utente autenticato."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/1/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "1",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bio\": \"Full Stack Developer & LeagueMate Creator\",\n    \"avatarUrl\": \"https://avatar.com/manuel.png\",\n    \"phoneNumber\": \"+39 333 1234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Aggiornamento del profilo. Autorizzazione a livello di risorsa: un utente puo' modificare solo il proprio profilo, un ADMIN qualsiasi profilo. Modificare il profilo altrui restituisce 403."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Error Handling",
+      "description": "Richieste volutamente errate, per verificare che l'applicazione gestisca gli errori in modo controllato restituendo status code corretti e un formato di risposta coerente.",
+      "item": [
+        {
+          "name": "POST Login - Wrong Password (401)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"manuel22\",\n    \"password\": \"passwordSbagliata\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Password errata. Attende 401 Unauthorized con messaggio generico."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Login - Unknown User (401)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"utenteInesistente\",\n    \"password\": \"qualsiasi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Username inesistente. Attende 401 con la STESSA risposta del caso precedente: distinguere i due casi permetterebbe di enumerare gli account registrati."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournaments - Invalid Token (401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer token-non-valido",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Token inesistente. Il Resource Server non lo trova tra le autorizzazioni salvate e risponde 401 JSON dalla catena di filtri di Spring Security, prima del DispatcherServlet."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Refresh - Invalid Token (401)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh_token\": \"token-inventato\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Refresh token sconosciuto o gia' usato (rotazione): attende 401."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Users - Missing Token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Nessun header Authorization su endpoint protetto. Attende 401."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournament - Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/9999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "9999"
+              ]
+            },
+            "description": "Risorsa inesistente. Attende 404 Not Found."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create Team - Validation Error (400)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teams",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Nome squadra sotto il minimo di 2 caratteri. Attende 400 con l'elenco dei campi non validi."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Profile of Another User (403)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/2/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bio\": \"Tentativo di modifica non autorizzata\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Lo script di pre-request esegue il login come shanks_player (ruolo USER), che prova a modificare il profilo di un altro utente: attende 403. Con un ADMIN la stessa richiesta sarebbe consentita.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{user_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "    url: pm.collectionVariables.get(\"base_url\") + \"/api/auth/login\",",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/json\" },",
+                  "    body: { mode: \"raw\", raw: JSON.stringify({ username: \"shanks_player\", password: \"password123\" }) }",
+                  "}, function (err, res) {",
+                  "    if (!err && res.code === 200) {",
+                  "        pm.collectionVariables.set(\"user_token\", res.json().access_token);",
+                  "    }",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Un utente non puo' modificare il profilo di un altro\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT Profile - Invalid Phone (400)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/1/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "1",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bio\": \"Test validazione\",\n    \"phoneNumber\": \"non-e-un-numero\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Numero di telefono non conforme al pattern. Attende 400 Bad Request con l'elenco dei campi non validi."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Tournaments - Sort Not Allowed (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments?sort=organizers.password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "organizers.password"
+                }
+              ]
+            },
+            "description": "L'ordinamento e' consentito solo su campi ammessi: attende 400."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "9. Logout",
+      "description": "Da eseguire per ultime: revocano la sessione salvata nelle variabili di collection. Dopo il logout serve un nuovo login.",
+      "item": [
+        {
+          "name": "POST Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Logout eseguito\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Revoca la sessione corrente: access token e refresh token smettono subito di funzionare. Attende 204."
+          },
+          "response": []
+        },
+        {
+          "name": "POST Logout All",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "    url: pm.collectionVariables.get(\"base_url\") + \"/api/auth/login\",",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/json\" },",
+                  "    body: { mode: \"raw\", raw: JSON.stringify({ username: \"manuel22\", password: \"password123\" }) }",
+                  "}, function (err, res) {",
+                  "    if (!err && res.code === 200) {",
+                  "        pm.collectionVariables.set(\"access_token\", res.json().access_token);",
+                  "        pm.collectionVariables.set(\"refresh_token\", res.json().refresh_token);",
+                  "    }",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Logout da tutti i dispositivi\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout-all"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Revoca tutte le sessioni dell'utente su ogni dispositivo. Lo script di pre-request esegue prima un nuovo login, cosi' la richiesta funziona anche dopo 'POST Logout'. Attende 204."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
