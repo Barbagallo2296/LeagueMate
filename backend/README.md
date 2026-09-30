@@ -1,8 +1,9 @@
-# LeagueMate API
-
-[![CI](https://github.com/Barbagallo2296/LeagueMate-API/actions/workflows/ci.yml/badge.svg)](https://github.com/Barbagallo2296/LeagueMate-API/actions/workflows/ci.yml)
+# LeagueMate — Backend
 
 Backend REST per la gestione di tornei amatoriali di calcio a girone all'italiana.
+
+> Questo backend è stato sviluppato originariamente nel repository [LeagueMate-API](https://github.com/Barbagallo2296/LeagueMate-API) e fa ora parte del monorepo LeagueMate.
+> Per avviare l'intero progetto (database, backend, frontend e AI) vedi il [README principale](../README.md).
 
 
 ## Tecnologie
@@ -103,7 +104,7 @@ I mapper sono classi statiche senza stato. I service restituiscono un DTO quando
 Lo schema è gestito **solo da Flyway**: ogni modifica è una migrazione versionata in `db/migration` (`V1__init_schema.sql`, `V2__limit_profile_bio_length.sql`, `V3__add_double_round_robin.sql`, `V4__oauth2_authorizations.sql`, `V5__add_team_owner.sql`). Hibernate gira con `ddl-auto=validate`: non modifica mai il database e all'avvio verifica che le entity corrispondano alle tabelle.
 
 - I **test di integrazione** applicano le stesse migrazioni su H2, quindi girano sullo schema reale.
-- I **dati demo** (`db/demo/R__demo_data.sql`) si caricano solo aggiungendo `classpath:db/demo` a `FLYWAY_LOCATIONS`, come fa il `docker-compose.yml`.
+- I **dati demo** (`db/demo/R__demo_data.sql`) si caricano solo aggiungendo `classpath:db/demo` a `FLYWAY_LOCATIONS`, come fa il `docker-compose.yml` nella cartella principale del repository.
 - Un database creato prima di Flyway viene registrato come versione 1 (`baseline-on-migrate`) e riceve solo le migrazioni successive.
 
 ### Configurazione JPA
@@ -278,10 +279,13 @@ Le liste di tornei, squadre e utenti sono **paginate**: `?page=0&size=20&sort=na
 - **Swagger UI**: `http://localhost:8080/swagger-ui.html` — documentazione interattiva di tutti gli endpoint. Con il pulsante *Authorize* si incolla l'`access_token` ottenuto dal login. Disattivabile con `SWAGGER_ENABLED=false`.
 - **Specifica OpenAPI**: `http://localhost:8080/v3/api-docs`
 - **Health check**: `http://localhost:8080/actuator/health` — pubblico, restituisce solo `{"status":"UP"}`. Nessun altro endpoint di Actuator è esposto.
+- **Collection Postman**: `docs/LeagueMate-API.postman_collection.json` nella cartella principale del repository.
 
 ---
 
 ## Avvio con Docker (consigliato)
+
+Il `docker-compose.yml` e il file `.env.example` si trovano nella **cartella principale del repository**: i comandi seguenti vanno lanciati da lì, non da `backend/`.
 
 ```bash
 docker compose up --build
@@ -302,7 +306,7 @@ cp .env.example .env
 | `LOGIN_RATE_LIMIT_CAPACITY` / `LOGIN_RATE_LIMIT_PERIOD` | `10` / `1m` | Tentativi di login consentiti per IP |
 | `SWAGGER_ENABLED` | `true` | Abilita Swagger UI e la specifica OpenAPI |
 
-Un solo comando avvia MySQL 8 e l'applicazione. All'avvio Flyway applica le migrazioni dello schema e carica i dati demo. Il Dockerfile scarica le dipendenze Maven in un layer separato (le build successive riusano la cache se il `pom.xml` non cambia), l'applicazione gira con un utente non-root e il container ha un `HEALTHCHECK` sull'endpoint di Actuator. Il build è multi-stage (Maven → JRE), MySQL ha un healthcheck e l'app attende che sia pronto.
+Lo stesso comando avvia MySQL 8 e il backend, insieme agli altri servizi del progetto descritti nel README principale. All'avvio Flyway applica le migrazioni dello schema e carica i dati demo. Il Dockerfile scarica le dipendenze Maven in un layer separato (le build successive riusano la cache se il `pom.xml` non cambia), l'applicazione gira con un utente non-root e il container ha un `HEALTHCHECK` sull'endpoint di Actuator. Il build è multi-stage (Maven → JRE), MySQL ha un healthcheck e l'app attende che sia pronto.
 
 ### Utenti precaricati
 
@@ -334,7 +338,10 @@ app.auth.access-token-ttl=${ACCESS_TOKEN_TTL:15m}
 app.auth.refresh-token-ttl=${REFRESH_TOKEN_TTL:7d}
 ```
 
+Dalla cartella principale del repository:
+
 ```bash
+cd backend
 export FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/demo   # facoltativo: dati demo
 ./mvnw spring-boot:run
 ```
@@ -389,14 +396,17 @@ I test di integrazione girano su un database H2 in memoria (profilo `test`) su c
 
 > `dto` ed `entity` sono esclusi dal report (boilerplate Lombok). I controller sono **inclusi** e coperti dai test di integrazione.
 
+Dalla cartella principale del repository:
+
 ```bash
+cd backend
 ./mvnw clean test
 ```
-Report JaCoCo in `target/site/jacoco/index.html`.
+Report JaCoCo in `backend/target/site/jacoco/index.html`.
 
 ### Integrazione continua
 
-A ogni push su `main` e a ogni pull request GitHub Actions (`.github/workflows/ci.yml`) esegue `mvnw verify` con JDK 21, incluso il test su MySQL reale, e pubblica il report JaCoCo come artifact.
+A ogni push su `main` e a ogni pull request GitHub Actions (`.github/workflows/ci.yml`, nella cartella principale del repository) esegue `mvnw verify` dentro `backend/` con JDK 21, incluso il test su MySQL reale, e pubblica il report JaCoCo come artifact.
 
 ---
 
@@ -406,9 +416,8 @@ A ogni push su `main` e a ogni pull request GitHub Actions (`.github/workflows/c
 |---|---|
 | Codice sorgente completo | ✅ |
 | Script SQL (migrazioni Flyway in `db/migration` + dati demo in `db/demo`) | ✅ |
-| Collection Postman (48 richieste, 9 cartelle; login, refresh e logout gestiti in automatico) | ✅ |
-| Script Docker (`Dockerfile` + `docker-compose.yml`) | ✅ |
-| Relazione tecnica | ✅ |
+| Collection Postman in `docs/` (48 richieste, 9 cartelle; login, refresh e logout gestiti in automatico) | ✅ |
+| Script Docker (`backend/Dockerfile` + `docker-compose.yml` nella cartella principale) | ✅ |
 
 ---
 
