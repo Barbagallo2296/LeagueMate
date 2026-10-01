@@ -172,6 +172,15 @@ class RoundRecapServiceTest {
     }
 
     @Test
+    @DisplayName("Il markdown del modello viene tolto dal testo salvato")
+    void removeMarkdown_StripsBoldAndHeadings() {
+        String raw = "## **Marine Ford vola**\n\nUna giornata __pazza__ con **tre** vittorie.";
+
+        assertEquals("Marine Ford vola\n\nUna giornata pazza con tre vittorie.",
+                RoundRecapService.removeMarkdown(raw));
+    }
+
+    @Test
     @DisplayName("Lettura: cronaca esistente restituita con il suo stato")
     void getRecap_Existing_ReturnsIt() {
         LocalDateTime generatedAt = LocalDateTime.of(2026, 10, 1, 12, 0);

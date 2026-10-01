@@ -30,8 +30,9 @@ public class RoundRecapService {
     static final String SYSTEM_PROMPT = "Sei il cronista sportivo di LeagueMate, piattaforma per tornei amatoriali "
             + "di calcio. Scrivi in italiano, tono vivace da quotidiano sportivo. Usa SOLO i fatti forniti, "
             + "riportando i risultati esattamente come sono scritti (chi batte chi e con che punteggio). "
-            + "Non inventare marcatori, minuti, giocatori, capitani, record o episodi. Non ricalcolare nulla. "
-            + "Un titolo e 2 paragrafi brevi. Massimo 150 parole.";
+            + "Non inventare marcatori, minuti, giocatori, capitani, record, episodi, date o momenti (oggi, domani). "
+            + "Non ricalcolare nulla. Scrivi 2 paragrafi brevi, senza titolo. Non usare markdown. "
+            + "Massimo 120 parole.";
 
     static final String USER_PROMPT_PREFIX = "Scrivi la cronaca usando solo questi fatti:\n\n";
 
@@ -86,7 +87,7 @@ public class RoundRecapService {
             }
 
             recap.setStatus(RecapStatus.READY);
-            recap.setContent(truncate(response.content().strip(), MAX_CONTENT_LENGTH));
+            recap.setContent(truncate(removeMarkdown(response.content()), MAX_CONTENT_LENGTH));
             recap.setModel(response.model() != null ? response.model() : aiClient.model());
             recap.setGeneratedAt(LocalDateTime.now());
         } catch (AiException ex) {
@@ -116,6 +117,13 @@ public class RoundRecapService {
         recap.setStatus(RecapStatus.PENDING);
         recap.setErrorMessage(null);
         return recapRepository.save(recap);
+    }
+
+    static String removeMarkdown(String text) {
+        return text.replace("**", "")
+                .replace("__", "")
+                .replaceAll("(?m)^\\s*#+\\s*", "")
+                .strip();
     }
 
     private static String truncate(String text, int maxLength) {
