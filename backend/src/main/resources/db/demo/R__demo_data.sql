@@ -58,15 +58,6 @@ INSERT INTO tournament_organizers (tournament_id, user_id)
 VALUES (1, 2)
     ON DUPLICATE KEY UPDATE user_id = user_id;
 
--- ---------------------------------------------------------------------
--- Secondo torneo demo: già in corso, per provare subito classifica,
--- statistiche e funzionalità AI. 8 squadre, sola andata (7 giornate).
--- Giornate 1-3 giocate; nella giornata 4 manca solo
--- Whitebeard Rovers - Straw Hat FC: inserendo quel risultato la giornata
--- si completa e parte la generazione della cronaca.
--- Giornate e partite usano id da 101 in su per non scontrarsi con quelle
--- create da generate-rounds sul torneo 1.
--- ---------------------------------------------------------------------
 INSERT INTO teams (id, name, logo_url, owner_id)
 VALUES (5, 'Marine Ford', 'https://leaguemate.com/logos/marineford.png', 2),
        (6, 'Kid Pirates', 'https://leaguemate.com/logos/kid.png', 2),
@@ -103,41 +94,32 @@ VALUES (101, 1, 2),
        (107, 7, 2)
     ON DUPLICATE KEY UPDATE id = id;
 
--- Calendario costruito con il metodo del cerchio (Big Mom Pirates fissa):
--- ogni coppia di squadre si incontra una sola volta.
 INSERT INTO matches (id, round_id, home_team_id, away_team_id, home_score, away_score, status)
 VALUES
--- Giornata 1
 (101, 101, 1, 8, 2, 1, 'COMPLETED'),
 (102, 101, 2, 7, 1, 1, 'COMPLETED'),
 (103, 101, 3, 6, 3, 0, 'COMPLETED'),
 (104, 101, 4, 5, 0, 2, 'COMPLETED'),
--- Giornata 2
 (105, 102, 8, 2, 1, 0, 'COMPLETED'),
 (106, 102, 3, 1, 1, 3, 'COMPLETED'),
 (107, 102, 4, 7, 2, 2, 'COMPLETED'),
 (108, 102, 5, 6, 1, 0, 'COMPLETED'),
--- Giornata 3
 (109, 103, 3, 8, 2, 2, 'COMPLETED'),
 (110, 103, 4, 2, 1, 3, 'COMPLETED'),
 (111, 103, 5, 1, 1, 1, 'COMPLETED'),
 (112, 103, 6, 7, 2, 1, 'COMPLETED'),
--- Giornata 4 (manca Whitebeard Rovers - Straw Hat FC)
 (113, 104, 8, 4, 0, 1, 'COMPLETED'),
 (114, 104, 5, 3, 2, 0, 'COMPLETED'),
 (115, 104, 6, 2, 2, 3, 'COMPLETED'),
 (116, 104, 7, 1, NULL, NULL, 'SCHEDULED'),
--- Giornata 5
 (117, 105, 5, 8, NULL, NULL, 'SCHEDULED'),
 (118, 105, 6, 4, NULL, NULL, 'SCHEDULED'),
 (119, 105, 7, 3, NULL, NULL, 'SCHEDULED'),
 (120, 105, 1, 2, NULL, NULL, 'SCHEDULED'),
--- Giornata 6
 (121, 106, 8, 6, NULL, NULL, 'SCHEDULED'),
 (122, 106, 7, 5, NULL, NULL, 'SCHEDULED'),
 (123, 106, 1, 4, NULL, NULL, 'SCHEDULED'),
 (124, 106, 2, 3, NULL, NULL, 'SCHEDULED'),
--- Giornata 7
 (125, 107, 7, 8, NULL, NULL, 'SCHEDULED'),
 (126, 107, 1, 6, NULL, NULL, 'SCHEDULED'),
 (127, 107, 2, 5, NULL, NULL, 'SCHEDULED'),

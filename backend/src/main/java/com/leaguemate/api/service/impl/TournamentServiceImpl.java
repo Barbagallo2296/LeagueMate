@@ -326,8 +326,6 @@ public class TournamentServiceImpl implements TournamentService {
         return computeStandings(getTournamentById(tournamentId));
     }
 
-    // Classifica "fotografata" alla fine di una giornata: conta solo le partite
-    // delle giornate fino a roundNumber, anche se ne sono state giocate di successive.
     @Override
     @Transactional(readOnly = true)
     public List<StandingEntry> calculateStandingsUpToRound(Long tournamentId, int roundNumber) {
