@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RoundRepository extends JpaRepository<Round, Long> {
@@ -20,4 +21,6 @@ public interface RoundRepository extends JpaRepository<Round, Long> {
             ORDER BY r.roundNumber, m.id
             """)
     List<Round> findByTournamentIdWithMatches(@Param("tournamentId") Long tournamentId);
+
+    Optional<Round> findByTournamentIdAndRoundNumber(Long tournamentId, int roundNumber);
 }

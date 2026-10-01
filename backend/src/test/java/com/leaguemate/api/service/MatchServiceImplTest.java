@@ -1,5 +1,6 @@
 package com.leaguemate.api.service;
 
+import com.leaguemate.api.ai.recap.RoundCompletedEvent;
 import com.leaguemate.api.entity.Match;
 import com.leaguemate.api.entity.MatchStatus;
 import com.leaguemate.api.entity.Round;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +35,9 @@ class MatchServiceImplTest {
 
     @Mock
     private RoundRepository roundRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private MatchServiceImpl matchService;
@@ -121,6 +126,37 @@ class MatchServiceImplTest {
         assertEquals("Heart Pirates", updated.getAwayTeam().getName());
         assertEquals(1, updated.getRound().getRoundNumber());
         verify(matchRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    void updateMatchResult_LastMatchOfRound_PublishesRoundCompleted() {
+        when(matchRepository.findByIdWithTeams(1L)).thenReturn(Optional.of(match));
+        when(matchRepository.save(any(Match.class))).thenReturn(match);
+        when(matchRepository.countByRoundIdAndStatus(1L, MatchStatus.SCHEDULED)).thenReturn(0L);
+
+        matchService.updateMatchResult(1L, 2, 1);
+
+        verify(eventPublisher).publishEvent(new RoundCompletedEvent(1L, 1L, 1));
+    }
+
+    @Test
+    void updateMatchResult_RoundStillOpen_DoesNotPublish() {
+        when(matchRepository.findByIdWithTeams(1L)).thenReturn(Optional.of(match));
+        when(matchRepository.save(any(Match.class))).thenReturn(match);
+        when(matchRepository.countByRoundIdAndStatus(1L, MatchStatus.SCHEDULED)).thenReturn(2L);
+
+        matchService.updateMatchResult(1L, 2, 1);
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void updateMatchResult_InvalidUpdate_DoesNotPublish() {
+        match.getRound().getTournament().setStatus(TournamentStatus.DRAFT);
+        when(matchRepository.findByIdWithTeams(1L)).thenReturn(Optional.of(match));
+
+        assertThrows(ResourceConflictException.class, () -> matchService.updateMatchResult(1L, 2, 1));
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

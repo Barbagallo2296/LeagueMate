@@ -1,7 +1,9 @@
 package com.leaguemate.api.service.impl;
 
+import com.leaguemate.api.ai.recap.RoundCompletedEvent;
 import com.leaguemate.api.entity.Match;
 import com.leaguemate.api.entity.MatchStatus;
+import com.leaguemate.api.entity.Round;
 import com.leaguemate.api.entity.TournamentStatus;
 import com.leaguemate.api.exception.ResourceConflictException;
 import com.leaguemate.api.exception.ResourceNotFoundException;
@@ -9,6 +11,7 @@ import com.leaguemate.api.repository.MatchRepository;
 import com.leaguemate.api.repository.RoundRepository;
 import com.leaguemate.api.service.MatchService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ public class MatchServiceImpl implements MatchService {
 
     private final MatchRepository matchRepository;
     private final RoundRepository roundRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -38,7 +42,15 @@ public class MatchServiceImpl implements MatchService {
         match.setAwayScore(awayScore);
         match.setStatus(MatchStatus.COMPLETED);
 
-        return matchRepository.save(match);
+        Match saved = matchRepository.save(match);
+
+        Round round = match.getRound();
+        if (matchRepository.countByRoundIdAndStatus(round.getId(), MatchStatus.SCHEDULED) == 0) {
+            eventPublisher.publishEvent(new RoundCompletedEvent(
+                    round.getTournament().getId(), round.getId(), round.getRoundNumber()));
+        }
+
+        return saved;
     }
 
     @Override
