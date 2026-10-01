@@ -1288,7 +1288,168 @@
       ]
     },
     {
-      "name": "9. Logout",
+      "name": "9. AI",
+      "item": [
+        {
+          "name": "PUT Complete Round 4 (triggers AI recap)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/matches/116/result",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "116",
+                "result"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"homeScore\": 0,\n    \"awayScore\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Result saved immediately\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Round Recap (AI)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/2/rounds/4/recap",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "2",
+                "rounds",
+                "4",
+                "recap"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Recap status returned\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect([\"READY\", \"PENDING\", \"FAILED\", \"NOT_AVAILABLE\"]).to.include(pm.response.json().status);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Regenerate Round Recap (AI)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/2/rounds/3/recap",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "2",
+                "rounds",
+                "3",
+                "recap"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Regeneration accepted\", function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Ask Tournament Assistant (AI)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/tournaments/2/assistant",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "tournaments",
+                "2",
+                "assistant"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"question\": \"Quando gioca la prossima partita Straw Hat FC?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Assistant answered or is unavailable\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect([\"OK\", \"UNAVAILABLE\"]).to.include(pm.response.json().status);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. Logout",
       "description": "Da eseguire per ultime: revocano la sessione salvata nelle variabili di collection. Dopo il logout serve un nuovo login.",
       "item": [
         {

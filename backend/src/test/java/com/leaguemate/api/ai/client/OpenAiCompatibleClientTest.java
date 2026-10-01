@@ -91,6 +91,37 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
+    @DisplayName("Tool call senza id → id generato, nessun errore")
+    void chat_ToolCallWithoutId_GeneratesId() {
+        server.expect(requestTo("https://openrouter.ai/api/v1/chat/completions"))
+                .andRespond(withSuccess("""
+                        {"model":"m","choices":[{"message":{"tool_calls":[
+                         {"function":{"name":"get_standings","arguments":"{}"}}]}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        AiResponse response = client.chat(List.of(ChatMessage.user("?")), List.of(), 100);
+
+        assertEquals("call_0", response.toolCalls().getFirst().id());
+    }
+
+    @Test
+    @DisplayName("Indirizzo con barra finale → URL corretto, senza doppia barra")
+    void chat_BaseUrlWithTrailingSlash_BuildsCorrectUrl() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer slashServer = MockRestServiceServer.bindTo(builder).build();
+        AiProperties withSlash = new AiProperties(true, "openai", "https://openrouter.ai/api/v1/", "m", "",
+                Duration.ofSeconds(5), Duration.ofSeconds(60), 0.4, 4096);
+        OpenAiCompatibleClient slashClient = new OpenAiCompatibleClient(builder, withSlash, JsonMapper.builder().build());
+        slashServer.expect(requestTo("https://openrouter.ai/api/v1/chat/completions"))
+                .andRespond(withSuccess("""
+                        {"model":"m","choices":[{"message":{"content":"ok"}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        assertEquals("ok", slashClient.chat(List.of(ChatMessage.user("?")), List.of(), 100).content());
+        slashServer.verify();
+    }
+
+    @Test
     @DisplayName("Errore del servizio → AiException")
     void chat_ServerError_ThrowsAiException() {
         server.expect(requestTo("https://openrouter.ai/api/v1/chat/completions"))

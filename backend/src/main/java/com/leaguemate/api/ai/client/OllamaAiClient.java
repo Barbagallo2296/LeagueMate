@@ -19,7 +19,7 @@ public class OllamaAiClient implements AiClient {
     private final AiProperties properties;
 
     public OllamaAiClient(RestClient.Builder builder, AiProperties properties) {
-        this.restClient = builder.baseUrl(properties.baseUrl()).build();
+        this.restClient = builder.baseUrl(properties.normalizedBaseUrl()).build();
         this.properties = properties;
     }
 

@@ -17,6 +17,14 @@ public record AiProperties(
         int contextSize
 ) {
 
+    public String normalizedBaseUrl() {
+        String url = baseUrl == null ? "" : baseUrl.strip();
+        while (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        return url;
+    }
+
     public boolean hasApiKey() {
         return apiKey != null && !apiKey.isBlank();
     }

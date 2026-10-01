@@ -23,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -169,6 +170,46 @@ class RoundRecapServiceTest {
 
         verifyNoInteractions(recapRepository, factsBuilder);
         verify(aiClient, never()).chat(anyList(), anyList(), anyInt());
+    }
+
+    @Test
+    @DisplayName("All'avvio le cronache rimaste PENDING diventano FAILED")
+    void failInterruptedRecaps_MarksPendingAsFailed() {
+        existing.setStatus(RecapStatus.PENDING);
+        when(recapRepository.findByStatus(RecapStatus.PENDING)).thenReturn(List.of(existing));
+
+        recapService.failInterruptedRecaps();
+
+        assertEquals(RecapStatus.FAILED, existing.getStatus());
+        assertEquals("Generation interrupted by a restart", existing.getErrorMessage());
+        verify(recapRepository).saveAll(List.of(existing));
+    }
+
+    @Test
+    @DisplayName("Due generazioni in contemporanea: se la riga esiste già, si riusa senza errori")
+    void generate_ConcurrentCreation_RetriesWithExistingRow() {
+        when(aiClient.enabled()).thenReturn(true);
+        when(recapRepository.findByRoundId(104L)).thenReturn(Optional.empty(), Optional.of(existing));
+        when(roundRepository.getReferenceById(104L)).thenReturn(new Round());
+        when(recapRepository.save(any(AiRoundRecap.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate round_id"))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(factsBuilder.build(2L, 4)).thenReturn(FACTS);
+        when(aiClient.chat(anyList(), anyList(), anyInt())).thenReturn(new AiResponse("Testo", List.of(), "m"));
+
+        recapService.generate(2L, 104L, 4);
+
+        assertEquals(RecapStatus.READY, existing.getStatus());
+    }
+
+    @Test
+    @DisplayName("Se non si riesce nemmeno a preparare la riga, nessuna eccezione esce dal thread")
+    void generate_CannotPrepareRow_DoesNotThrow() {
+        when(aiClient.enabled()).thenReturn(true);
+        when(recapRepository.findByRoundId(104L)).thenThrow(new IllegalStateException("db down"));
+
+        assertDoesNotThrow(() -> recapService.generate(2L, 104L, 4));
+        verifyNoInteractions(factsBuilder);
     }
 
     @Test

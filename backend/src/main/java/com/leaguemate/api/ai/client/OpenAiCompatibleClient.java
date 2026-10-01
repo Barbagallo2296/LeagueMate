@@ -11,6 +11,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ public class OpenAiCompatibleClient implements AiClient {
         if (properties.hasApiKey()) {
             builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey());
         }
-        this.restClient = builder.baseUrl(properties.baseUrl()).build();
+        this.restClient = builder.baseUrl(properties.normalizedBaseUrl()).build();
         this.properties = properties;
         this.jsonMapper = jsonMapper;
     }
@@ -63,9 +64,13 @@ public class OpenAiCompatibleClient implements AiClient {
         }
 
         CompletionMessage message = response.choices().getFirst().message();
-        List<ToolCall> toolCalls = message.toolCalls() == null ? List.of() : message.toolCalls().stream()
-                .map(call -> new ToolCall(call.id(), call.function().name(), parseArguments(call.function().arguments())))
-                .toList();
+        List<ToolCall> toolCalls = new ArrayList<>();
+        List<CompletionToolCall> rawCalls = message.toolCalls() != null ? message.toolCalls() : List.of();
+        for (int i = 0; i < rawCalls.size(); i++) {
+            CompletionToolCall call = rawCalls.get(i);
+            String id = call.id() != null && !call.id().isBlank() ? call.id() : "call_" + i;
+            toolCalls.add(new ToolCall(id, call.function().name(), parseArguments(call.function().arguments())));
+        }
         return new AiResponse(message.content(), toolCalls, response.model());
     }
 

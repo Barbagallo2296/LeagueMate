@@ -32,12 +32,21 @@ public class AiClientConfig {
         requestFactory.setReadTimeout(properties.readTimeout());
         RestClient.Builder builder = RestClient.builder().requestFactory(requestFactory);
 
-        log.info("AI provider: {} at {}, model {}", properties.provider(), properties.baseUrl(), properties.model());
-        return switch (properties.provider().toLowerCase()) {
-            case "ollama" -> new OllamaAiClient(builder, properties);
-            case "openai" -> new OpenAiCompatibleClient(builder, properties, jsonMapper);
-            default -> throw new IllegalStateException(
-                    "Unknown AI_PROVIDER '" + properties.provider() + "': use 'ollama' or 'openai'");
+        String provider = properties.provider() == null ? "" : properties.provider().strip().toLowerCase();
+        return switch (provider) {
+            case "ollama" -> {
+                log.info("AI provider: ollama at {}, model {}", properties.normalizedBaseUrl(), properties.model());
+                yield new OllamaAiClient(builder, properties);
+            }
+            case "openai" -> {
+                log.info("AI provider: openai at {}, model {}", properties.normalizedBaseUrl(), properties.model());
+                yield new OpenAiCompatibleClient(builder, properties, jsonMapper);
+            }
+            default -> {
+                log.error("Unknown AI_PROVIDER '{}': use 'ollama' or 'openai'. AI features are disabled",
+                        properties.provider());
+                yield new DisabledAiClient();
+            }
         };
     }
 }

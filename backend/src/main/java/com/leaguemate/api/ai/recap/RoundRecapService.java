@@ -17,7 +17,10 @@ import com.leaguemate.api.repository.RoundRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -74,7 +77,13 @@ public class RoundRecapService {
             return;
         }
 
-        AiRoundRecap recap = savePending(roundId);
+        AiRoundRecap recap;
+        try {
+            recap = savePending(roundId);
+        } catch (RuntimeException ex) {
+            log.error("Could not prepare the recap for round {}", roundId, ex);
+            return;
+        }
 
         try {
             String facts = factsBuilder.build(tournamentId, roundNumber);
@@ -108,7 +117,25 @@ public class RoundRecapService {
                         "Round " + roundNumber + " not found in tournament with id: " + tournamentId));
     }
 
+    @EventListener(ApplicationReadyEvent.class)
+    public void failInterruptedRecaps() {
+        List<AiRoundRecap> interrupted = recapRepository.findByStatus(RecapStatus.PENDING);
+        interrupted.forEach(recap -> {
+            recap.setStatus(RecapStatus.FAILED);
+            recap.setErrorMessage("Generation interrupted by a restart");
+        });
+        recapRepository.saveAll(interrupted);
+    }
+
     private AiRoundRecap savePending(Long roundId) {
+        try {
+            return recapRepository.save(pendingRecap(roundId));
+        } catch (DataIntegrityViolationException ex) {
+            return recapRepository.save(pendingRecap(roundId));
+        }
+    }
+
+    private AiRoundRecap pendingRecap(Long roundId) {
         AiRoundRecap recap = recapRepository.findByRoundId(roundId).orElseGet(() -> {
             AiRoundRecap created = new AiRoundRecap();
             created.setRound(roundRepository.getReferenceById(roundId));
@@ -116,7 +143,7 @@ public class RoundRecapService {
         });
         recap.setStatus(RecapStatus.PENDING);
         recap.setErrorMessage(null);
-        return recapRepository.save(recap);
+        return recap;
     }
 
     public static String removeMarkdown(String text) {
