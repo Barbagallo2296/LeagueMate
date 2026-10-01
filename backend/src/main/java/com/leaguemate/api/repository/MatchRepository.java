@@ -53,6 +53,21 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
             SELECT DISTINCT m FROM Match m
             JOIN FETCH m.homeTeam
             JOIN FETCH m.awayTeam
+            JOIN FETCH m.round r
+            WHERE r.tournament.id = :tournamentId
+              AND r.roundNumber <= :roundNumber
+              AND m.status = :status
+            """)
+    List<Match> findCompletedMatchesUpToRound(
+            @Param("tournamentId") Long tournamentId,
+            @Param("roundNumber") int roundNumber,
+            @Param("status") MatchStatus status
+    );
+
+    @Query("""
+            SELECT DISTINCT m FROM Match m
+            JOIN FETCH m.homeTeam
+            JOIN FETCH m.awayTeam
             JOIN FETCH m.round
             WHERE m.round.id = :roundId
             ORDER BY m.id

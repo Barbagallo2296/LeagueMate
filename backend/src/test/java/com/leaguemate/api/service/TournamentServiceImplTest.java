@@ -545,6 +545,29 @@ class TournamentServiceImplTest {
     }
 
     @Test
+    void calculateStandingsUpToRound_UsesOnlyMatchesUpToThatRound() {
+        when(tournamentRepository.findById(1L)).thenReturn(Optional.of(tournament));
+        when(registrationRepository.findConfirmedWithTeams(1L, RegistrationStatus.CONFIRMED))
+                .thenReturn(List.of(createReg(teamA), createReg(teamB)));
+        when(matchRepository.findCompletedMatchesUpToRound(1L, 2, MatchStatus.COMPLETED))
+                .thenReturn(List.of(completedMatch(teamB, teamA, 2, 0)));
+
+        List<StandingEntry> standings = tournamentService.calculateStandingsUpToRound(1L, 2);
+
+        assertEquals("Team B", standings.get(0).teamName());
+        assertEquals(3, standings.get(0).points());
+        verify(matchRepository, never()).findCompletedMatchesWithTeams(any(), any());
+    }
+
+    @Test
+    void calculateStandingsUpToRound_TournamentNotFound_Throws() {
+        when(tournamentRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> tournamentService.calculateStandingsUpToRound(99L, 1));
+    }
+
+    @Test
     void getTournamentStats_ReturnsCorrectStats() {
         when(tournamentRepository.findById(1L)).thenReturn(Optional.of(tournament));
         when(matchRepository.countByStatus(1L)).thenReturn(List.of(statusCount(MatchStatus.COMPLETED, 1L)));

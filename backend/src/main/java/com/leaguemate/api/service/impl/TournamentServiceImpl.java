@@ -326,16 +326,30 @@ public class TournamentServiceImpl implements TournamentService {
         return computeStandings(getTournamentById(tournamentId));
     }
 
+    // Classifica "fotografata" alla fine di una giornata: conta solo le partite
+    // delle giornate fino a roundNumber, anche se ne sono state giocate di successive.
+    @Override
+    @Transactional(readOnly = true)
+    public List<StandingEntry> calculateStandingsUpToRound(Long tournamentId, int roundNumber) {
+        Tournament tournament = getTournamentById(tournamentId);
+        return computeStandings(tournament, matchRepository.findCompletedMatchesUpToRound(
+                tournamentId, roundNumber, MatchStatus.COMPLETED));
+    }
+
     private List<StandingEntry> computeStandings(Tournament tournament) {
-        Long tournamentId = tournament.getId();
+        return computeStandings(tournament, matchRepository.findCompletedMatchesWithTeams(
+                tournament.getId(), MatchStatus.COMPLETED));
+    }
+
+    private List<StandingEntry> computeStandings(Tournament tournament, List<Match> completedMatches) {
         Map<Long, TeamStats> table = new LinkedHashMap<>();
 
-        registrationRepository.findConfirmedWithTeams(tournamentId, RegistrationStatus.CONFIRMED)
+        registrationRepository.findConfirmedWithTeams(tournament.getId(), RegistrationStatus.CONFIRMED)
                 .forEach(reg -> table.put(
                         reg.getTeam().getId(),
                         new TeamStats(reg.getTeam().getName())));
 
-        matchRepository.findCompletedMatchesWithTeams(tournamentId, MatchStatus.COMPLETED)
+        completedMatches
                 .forEach(match -> {
                     TeamStats home = table.get(match.getHomeTeam().getId());
                     TeamStats away = table.get(match.getAwayTeam().getId());

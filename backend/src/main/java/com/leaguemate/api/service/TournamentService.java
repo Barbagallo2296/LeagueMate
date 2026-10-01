@@ -36,6 +36,8 @@ public interface TournamentService {
 
     List<StandingEntry> calculateStandings(Long tournamentId);
 
+    List<StandingEntry> calculateStandingsUpToRound(Long tournamentId, int roundNumber);
+
     TournamentStatsResponse getTournamentStats(Long tournamentId);
 
     void addOrganizer(Long tournamentId, Long userId);
