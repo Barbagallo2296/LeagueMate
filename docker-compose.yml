@@ -21,11 +21,45 @@ services:
       retries: 10
       start_period: 30s
 
+  ollama:
+    image: ollama/ollama
+    container_name: leaguemate-ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: "-1"
+      OLLAMA_CONTEXT_LENGTH: "4096"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - leaguemate-network
+    healthcheck:
+      test: [ "CMD", "ollama", "list" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  ollama-init:
+    image: ollama/ollama
+    container_name: leaguemate-ollama-init
+    environment:
+      OLLAMA_HOST: ollama:11434
+      AI_MODEL: ${AI_MODEL:-qwen3.5:4b}
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: [ "ollama pull $$AI_MODEL && echo '' | ollama run $$AI_MODEL" ]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - leaguemate-network
+    restart: "no"
+
   api:
     build: ./backend
     container_name: leaguemate-api
     ports:
       - "${API_PORT:-8080}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${MYSQL_DATABASE:-leaguemate_db}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-leaguemate_user}
@@ -38,14 +72,26 @@ services:
       LOGIN_RATE_LIMIT_CAPACITY: ${LOGIN_RATE_LIMIT_CAPACITY:-10}
       LOGIN_RATE_LIMIT_PERIOD: ${LOGIN_RATE_LIMIT_PERIOD:-1m}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+      AI_ENABLED: ${AI_ENABLED:-true}
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      AI_BASE_URL: ${AI_BASE_URL:-http://ollama:11434}
+      AI_MODEL: ${AI_MODEL:-qwen3.5:4b}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_CONNECT_TIMEOUT: ${AI_CONNECT_TIMEOUT:-5s}
+      AI_READ_TIMEOUT: ${AI_READ_TIMEOUT:-180s}
+      AI_ASSISTANT_RATE_LIMIT_CAPACITY: ${AI_ASSISTANT_RATE_LIMIT_CAPACITY:-10}
+      AI_ASSISTANT_RATE_LIMIT_PERIOD: ${AI_ASSISTANT_RATE_LIMIT_PERIOD:-1m}
     depends_on:
       db:
         condition: service_healthy
+      ollama:
+        condition: service_started
     networks:
       - leaguemate-network
 
 volumes:
   mysql_data:
+  ollama_data:
 
 networks:
   leaguemate-network:
