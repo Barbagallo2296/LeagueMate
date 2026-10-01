@@ -23,6 +23,7 @@ Backend REST per la gestione di tornei amatoriali di calcio a girone all'italian
 | springdoc-openapi (Swagger UI) | 3.1.x |
 | Bucket4j | 8.x |
 | Testcontainers | 2.x |
+| Ollama + modello `qwen3.5:4b` (AI locale) | ultima immagine `ollama/ollama` |
 | Lombok | 1.18.x |
 | JaCoCo | 0.8.12 |
 | Maven | 3.x |
@@ -49,7 +50,11 @@ src/main/java/com/leaguemate/api/
 ├── dto/ # Java Records (input/output)
 ├── mapper/ # Conversione Entity → DTO, in un unico punto
 ├── security/ # Authorization Server, token opachi, SecurityConfig, ownership di tornei e squadre
-└── exception/ # Handler eccezioni
+├── exception/ # Handler eccezioni
+└── ai/ # Funzionalità AI
+    ├── client/ # AiClient: Ollama, servizi compatibili OpenAI, AI disattivata
+    ├── recap/ # Cronaca della giornata: fatti, generazione in background
+    └── assistant/ # Assistente del torneo: tool, ciclo agentico, rate limit
 
 src/main/resources/db/
 ├── migration/ # Schema versionato Flyway (V1, V2, V3...)
@@ -69,6 +74,8 @@ I mapper sono classi statiche senza stato. I service restituiscono un DTO quando
 | **Team** | `TeamController` | `TeamService` | CRUD squadre con proprietario |
 | **TeamMember** | `TeamMemberController` | `TeamMemberService` | Membri delle squadre con ruoli |
 | **Match** | `MatchController` | `MatchService` | Risultati delle partite |
+| **Cronaca AI** | `RoundRecapController` | `RoundRecapService` | Cronaca della giornata scritta dall'AI |
+| **Assistente AI** | `AssistantController` | `TournamentAssistantService` | Domande in linguaggio naturale sul torneo |
 
 > **Nessuna Entity JPA viene esposta nelle risposte API.** Tutti i controller restituiscono esclusivamente DTO (Java Records), isolando completamente il modello di persistenza dal contratto REST.
 
@@ -81,6 +88,7 @@ I mapper sono classi statiche senza stato. I service restituiscono un DTO quando
 | Tipo | Entità | Note |
 |---|---|---|
 | `@OneToOne` | `User` ↔ `UserProfile` | FK su `UserProfile`, esposta via `/api/users/{id}/profile` |
+| `@OneToOne` | `AiRoundRecap` → `Round` | Una cronaca AI per giornata, FK unica su `ai_round_recaps` con `ON DELETE CASCADE` |
 | `@ManyToOne / @OneToMany` | `Tournament` → `Round` → `Match` | Tutte LAZY |
 | `@ManyToMany`  | `Tournament` ↔ `User` (co-organizzatori) | `@JoinTable` su `tournament_organizers` — la relazione non porta attributi propri |
 | `@ManyToMany`  | `User` ↔ `Team` tramite `TeamMember` | Attributi: `teamRole`, `joinedAt` |
@@ -101,7 +109,7 @@ I mapper sono classi statiche senza stato. I service restituiscono un DTO quando
 
 ### Schema del database (Flyway)
 
-Lo schema è gestito **solo da Flyway**: ogni modifica è una migrazione versionata in `db/migration` (`V1__init_schema.sql`, `V2__limit_profile_bio_length.sql`, `V3__add_double_round_robin.sql`, `V4__oauth2_authorizations.sql`, `V5__add_team_owner.sql`). Hibernate gira con `ddl-auto=validate`: non modifica mai il database e all'avvio verifica che le entity corrispondano alle tabelle.
+Lo schema è gestito **solo da Flyway**: ogni modifica è una migrazione versionata in `db/migration` (`V1__init_schema.sql`, `V2__limit_profile_bio_length.sql`, `V3__add_double_round_robin.sql`, `V4__oauth2_authorizations.sql`, `V5__add_team_owner.sql`, `V6__ai_round_recaps.sql`). Hibernate gira con `ddl-auto=validate`: non modifica mai il database e all'avvio verifica che le entity corrispondano alle tabelle.
 
 - I **test di integrazione** applicano le stesse migrazioni su H2, quindi girano sullo schema reale.
 - I **dati demo** (`db/demo/R__demo_data.sql`) si caricano solo aggiungendo `classpath:db/demo` a `FLYWAY_LOCATIONS`, come fa il `docker-compose.yml` nella cartella principale del repository.
@@ -121,6 +129,7 @@ Lo schema è gestito **solo da Flyway**: ogni modifica è una migrazione version
 - **TournamentRegistration** — giunzione ricca Tournament↔Team con `RegistrationStatus` e `registeredAt`
 - **Round** — giornata del torneo
 - **Match** — partita con squadra casa/trasferta, score e stato
+- **AiRoundRecap** — cronaca AI di una giornata (`@OneToOne` verso `Round`): stato `PENDING`/`READY`/`FAILED`, testo, modello, data di generazione, eventuale errore
 
 ---
 
@@ -160,6 +169,141 @@ return table.values().stream()
 
 ---
 
+## Funzionalità AI
+
+Il backend integra un modello linguistico **locale** (Ollama con `qwen3.5:4b`) con due funzioni:
+
+1. **Cronaca della giornata**: quando l'ultima partita di una giornata viene registrata, l'AI scrive in background un breve articolo in stile quotidiano sportivo.
+2. **Assistente del torneo**: si fanno domande in linguaggio naturale ("Quando gioca Straw Hat FC?", "Chi ha il miglior attacco?") e l'AI risponde consultando i dati del torneo tramite **tool calling**.
+
+Tutto il codice è nel package `ai/` e non usa librerie AI: le chiamate HTTP sono fatte con il `RestClient` di Spring, per avere pieno controllo sul JSON inviato (per esempio `"think": false`) ed evitare dipendenze non ancora compatibili con Spring Boot 4.1.
+
+### Principio: i fatti li scrive il backend
+
+**L'LLM non riceve mai numeri grezzi da interpretare.** Nei test preliminari i modelli piccoli, ricevendo dati come `home_score: 3, away_score: 2`, invertivano i risultati o sbagliavano chi aveva vinto. Per questo il backend calcola tutto (esiti, classifica, statistiche) e passa al modello frasi già scritte in italiano:
+
+```
+Giornata 4 di 7 del torneo New World League.
+
+RISULTATI:
+- Blackbeard City batte Big Mom Pirates 1-0 (vittoria in trasferta)
+- Marine Ford batte Red Hair United 2-0 (vittoria in casa)
+- Heart Pirates batte Kid Pirates 3-2 (vittoria in trasferta)
+- Straw Hat FC batte Whitebeard Rovers 2-0 (vittoria in trasferta)
+
+CLASSIFICA DOPO LA GIORNATA:
+1. Straw Hat FC 10 punti (3 vittorie, 1 pareggio, 0 sconfitte)
+2. Marine Ford 10 punti (3 vittorie, 1 pareggio, 0 sconfitte)
+...
+
+DA SEGNALARE:
+- Capolista a pari punti: Straw Hat FC e Marine Ford (10 punti)
+- Miglior attacco: Straw Hat FC (8 gol)
+- Peggior difesa: Kid Pirates (8 gol subiti)
+- Ancora imbattute: Straw Hat FC e Marine Ford
+- Ancora senza vittorie: Whitebeard Rovers
+- Mancano 12 partite alla fine
+
+PROSSIMA GIORNATA:
+- Marine Ford - Big Mom Pirates
+...
+```
+
+Chi vince è sempre scritto per primo con il proprio punteggio, i plurali sono corretti ("1 punto", "3 punti") e le parità in testa vengono dichiarate esplicitamente. All'AI resta solo il compito di raccontare. Lo stesso principio vale per l'assistente: ogni partita giocata restituita dai tool contiene anche il risultato già scritto a parole.
+
+Per lo stesso motivo il **titolo** della cronaca non è chiesto al modello (nelle prove lo ometteva o lo inventava): il frontend mostra un titolo fisso "Giornata N · Nome torneo" e l'AI scrive solo i due paragrafi.
+
+### Cronaca della giornata (in background)
+
+```
+PUT /api/matches/{id}/result
+  └─ MatchServiceImpl salva il risultato
+       └─ nessuna partita SCHEDULED nella giornata? → pubblica RoundCompletedEvent
+            └─ risposta immediata all'organizzatore (l'AI non viene attesa)
+
+dopo il commit della transazione, su un thread dedicato:
+RecapGenerationListener (@TransactionalEventListener AFTER_COMMIT + @Async)
+  └─ RoundRecapService: riga in PENDING → RoundFactsBuilder → AI → READY oppure FAILED
+```
+
+- `RoundFactsBuilder` costruisce i fatti riusando `TournamentService`, compresa `calculateStandingsUpToRound`: la classifica è quella **alla fine di quella giornata**, anche se ne sono già state giocate di successive.
+- Le cronache sono salvate nella tabella `ai_round_recaps` (una per giornata). Se un risultato di una giornata già raccontata viene modificato, la cronaca viene rigenerata.
+- L'executor `aiExecutor` ha **un solo thread** (Ollama elabora comunque una richiesta alla volta) e una coda di 20 richieste.
+- All'avvio, eventuali cronache rimaste `PENDING` per un riavvio vengono portate a `FAILED`, così possono essere rigenerate.
+- Il testo viene ripulito da eventuale markdown (`**`, `#`) prima del salvataggio.
+
+### Assistente del torneo (tool calling)
+
+L'assistente è un piccolo agente: il modello riceve la domanda e la descrizione di 4 tool, decide quale usare, il backend lo esegue e gli restituisce il risultato; il ciclo si ripete per **massimo 4 passaggi**, dopo i quali un'ultima chiamata senza tool obbliga il modello a rispondere.
+
+| Tool | Restituisce |
+|---|---|
+| `get_standings()` | classifica attuale |
+| `get_tournament_stats()` | squadre, partite giocate e da giocare, gol, media gol, miglior attacco |
+| `get_round(round_number)` | partite di una giornata con il risultato scritto o "da giocare" |
+| `get_team_matches(team_name)` | tutte le partite di una squadra (i nomi ammessi sono passati come `enum` nello schema) |
+
+- I tool sono **solo in lettura** e sempre vincolati al torneo dell'URL: il modello non può leggere altri tornei né modificare dati.
+- Argomenti non validi, squadre inesistenti o giornate fuori intervallo producono un JSON `{"error": "..."}` restituito al modello, non un'eccezione.
+- Il nome della squadra è confrontato senza distinzione di maiuscole.
+- **Rate limit**: 10 domande al minuto per utente (Bucket4j, configurabile), oltre le quali la risposta è `429 Too Many Requests` con header `Retry-After`.
+- La risposta è un normale JSON, non in streaming:
+
+```json
+{ "status": "OK", "answer": "Straw Hat FC gioca la giornata 5 in casa contro Heart Pirates.", "toolsUsed": ["get_team_matches"], "message": null }
+```
+
+### Prompt e parametri del modello
+
+| Parametro | Valore |
+|---|---|
+| Modello | `qwen3.5:4b` (configurabile con `AI_MODEL`) |
+| Ragionamento | disattivato con `"think": false`; se il modello non supporta il campo, la richiesta viene ripetuta senza |
+| `num_ctx` / `temperature` | 4096 / 0.4 |
+| Lunghezza massima della risposta | 400 token per la cronaca, 300 per l'assistente |
+
+I system prompt sono in `RoundRecapService.SYSTEM_PROMPT` e `TournamentAssistantService.SYSTEM_PROMPT`. Quello della cronaca chiede di usare solo i fatti forniti, di non inventare marcatori, minuti, giocatori, date o episodi, e di scrivere 2 paragrafi senza titolo né markdown (massimo 120 parole). Quello dell'assistente viene compilato con nome del torneo, elenco delle squadre e giornate giocate.
+
+### L'app funziona anche senza AI
+
+Se Ollama è spento, lento, il modello non è ancora scaricato oppure `AI_ENABLED=false`:
+
+- tutti gli altri endpoint funzionano normalmente e il backend parte comunque (anche con un `AI_PROVIDER` non valido, che disattiva solo l'AI con un errore nel log);
+- la cronaca va in stato `FAILED` con un messaggio breve, e il `GET` restituisce sempre 200;
+- l'assistente risponde 200 con `"status": "UNAVAILABLE"` e un messaggio leggibile;
+- nessuna funzione AI restituisce mai un `500`.
+
+### Configurazione dell'AI
+
+| Profilo | Come | Quando |
+|---|---|---|
+| **Ollama nel docker compose** (default) | nessuna configurazione | funziona ovunque, su CPU |
+| **Ollama nel compose con GPU NVIDIA** | `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build` | PC con scheda NVIDIA e Docker con supporto GPU |
+| **Ollama installato sul PC** | `AI_BASE_URL=http://host.docker.internal:11434` | Mac con chip Apple (Ollama nativo usa la GPU Metal) o chi ha già Ollama |
+| **Servizio online compatibile OpenAI** | `AI_PROVIDER=openai`, `AI_BASE_URL=https://openrouter.ai/api/v1`, `AI_API_KEY=...`, `AI_MODEL=<modello del servizio>` | OpenRouter, OpenAI, Groq e simili |
+
+Il servizio `ollama-init` del compose scarica il modello al primo avvio (circa **3,4 GB**, una sola volta: resta nel volume `ollama_data`) e lo carica in memoria, così anche la prima richiesta è veloce. Il backend non lo aspetta: parte subito e le funzioni AI si attivano appena il modello è pronto. Per seguire il download: `docker compose logs -f ollama-init`.
+
+Il servizio `ollama` non espone porte sull'host: lo raggiunge solo il backend dalla rete interna di Docker.
+
+### Requisiti e tempi misurati
+
+- Circa **3,4 GB** di disco per il modello e almeno **6 GB di RAM** assegnati a Docker.
+- Su PC poco potenti si può usare `AI_MODEL=qwen3.5:2b`.
+
+| | Con GPU (RTX 3070) | Solo CPU |
+|---|---|---|
+| Cronaca | 3-25 s | circa 25 s |
+| Assistente | circa 1 s | circa 20 s |
+
+### Limiti noti
+
+- Il modello è piccolo: lo stile delle cronache varia da una generazione all'altra (circa 120-180 parole) e a volte aggiunge frasi di colore non presenti nei fatti. I risultati delle partite, scritti dal backend, sono riportati correttamente.
+- Quando l'assistente fa confronti numerici da solo (per esempio "quanti gol in meno") può sbagliare il calcolo, anche se i dati ricevuti dai tool sono corretti.
+- Se una rigenerazione fallisce, la cronaca va in `FAILED` ma conserva il testo precedente, che il frontend può decidere se mostrare.
+
+---
+
 ## Sicurezza
 
 - Autenticazione con **Spring Authorization Server**: al login vengono emessi un **access token opaco** (una stringa casuale senza dati, valida 15 minuti) e un **refresh token** (valido 7 giorni). Le durate sono configurabili con `ACCESS_TOKEN_TTL` e `REFRESH_TOKEN_TTL`
@@ -177,6 +321,8 @@ return table.values().stream()
 - L'email di un utente e il numero di telefono del suo profilo sono visibili solo all'utente stesso o a un `ADMIN`
 - Messaggi di errore generici in fase di login per prevenire la *user enumeration*
 - **Rate limit sul login** (`LoginRateLimitFilter`, Bucket4j): 10 tentativi al minuto per IP, oltre i quali la risposta è `429 Too Many Requests` con header `Retry-After`. Configurabile con `LOGIN_RATE_LIMIT_CAPACITY` e `LOGIN_RATE_LIMIT_PERIOD`. Dietro un reverse proxy l'IP reale viene letto da `X-Forwarded-For` (`server.forward-headers-strategy=native`: Tomcat si fida solo dei proxy interni, quindi un client esterno non può falsificarlo), e i contatori inattivi vengono eliminati periodicamente
+- **Rate limit sull'assistente AI** (`AssistantRateLimiter`, Bucket4j): 10 domande al minuto **per utente**, oltre le quali la risposta è `429` con `Retry-After`. Configurabile con `AI_ASSISTANT_RATE_LIMIT_CAPACITY` e `AI_ASSISTANT_RATE_LIMIT_PERIOD`
+- **Tool dell'assistente in sola lettura**, vincolati al torneo dell'URL: il modello non può leggere altri tornei né modificare dati
 - **CORS** abilitato per il frontend: le origini ammesse si configurano con `CORS_ALLOWED_ORIGINS` (separate da virgola; default `http://localhost:5173,http://localhost:3000`, le porte di sviluppo di Vite e Create React App)
 
 ---
@@ -196,13 +342,14 @@ return table.values().stream()
 | `HttpRequestMethodNotSupportedException` | `405 Method Not Allowed` |
 | `ResourceConflictException`, `DataIntegrityViolationException` | `409 Conflict` |
 | `HttpMediaTypeNotSupportedException` | `415 Unsupported Media Type` |
+| `TooManyRequestsException` (rate limit dell'assistente, con `Retry-After`) | `429 Too Many Requests` |
 | `Exception` (fallback, con stack trace nei log) | `500 Internal Server Error` |
 
 Gli errori che nascono nella filter chain di Spring Security (token non valido, token mancante, accesso negato a livello URL) avvengono prima del `DispatcherServlet` e non sono intercettabili dal `@RestControllerAdvice`: li scrive `SecurityErrorResponse`, con lo stesso formato JSON.
 
 ---
 
-## Endpoint REST — 38 totali
+## Endpoint REST — 41 totali
 
 Le liste di tornei, squadre e utenti sono **paginate**: `?page=0&size=20&sort=name,asc` (default 20 elementi, massimo 100). La risposta ha la forma `{ "content": [...], "page": { "size", "number", "totalElements", "totalPages" } }`. Il parametro `sort` accetta solo i campi ammessi da ciascun endpoint; un campo diverso restituisce `400`.
 
@@ -269,8 +416,15 @@ Le liste di tornei, squadre e utenti sono **paginate**: `?page=0&size=20&sort=na
 ### Partite (2)
 | Metodo | Endpoint | Accesso |
 |---|---|---|
-| PUT | `/api/matches/{id}/result` | **ADMIN / organizzatore del torneo** |
+| PUT | `/api/matches/{id}/result` | **ADMIN / organizzatore del torneo** — se completa la giornata, avvia la cronaca AI |
 | GET | `/api/matches/round/{roundId}` | Autenticato |
+
+### AI (3)
+| Metodo | Endpoint | Accesso |
+|---|---|---|
+| GET | `/api/tournaments/{id}/rounds/{roundNumber}/recap` | Autenticato — `{ status, content, model, generatedAt }`, con `status` fra `READY`, `PENDING`, `FAILED`, `NOT_AVAILABLE`; sempre `200` per una giornata esistente, `404` altrimenti |
+| POST | `/api/tournaments/{id}/rounds/{roundNumber}/recap` | **ADMIN / organizzatore del torneo** — rigenera in background, `202 Accepted`; `409` se la giornata non è completa o l'AI è disattivata |
+| POST | `/api/tournaments/{id}/assistant` | Autenticato — body `{"question": "..."}` (1-300 caratteri), risposta `{ status, answer, toolsUsed, message }` con `status` `OK` o `UNAVAILABLE`; `429` oltre il rate limit |
 
 ---
 
@@ -305,8 +459,21 @@ cp .env.example .env
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Origini del frontend ammesse |
 | `LOGIN_RATE_LIMIT_CAPACITY` / `LOGIN_RATE_LIMIT_PERIOD` | `10` / `1m` | Tentativi di login consentiti per IP |
 | `SWAGGER_ENABLED` | `true` | Abilita Swagger UI e la specifica OpenAPI |
+| `AI_ENABLED` | `true` | Con `false` le funzioni AI rispondono "non disponibile" e Ollama non viene mai chiamato |
+| `AI_PROVIDER` | `ollama` | `ollama` (API nativa di Ollama) oppure `openai` (qualsiasi servizio compatibile OpenAI) |
+| `AI_BASE_URL` | `http://ollama:11434` | Indirizzo del servizio AI: il container `ollama`, `http://host.docker.internal:11434` per un Ollama installato sul PC, oppure per esempio `https://openrouter.ai/api/v1` |
+| `AI_MODEL` | `qwen3.5:4b` | Modello da usare (scaricato automaticamente da `ollama-init`); `qwen3.5:2b` per PC poco potenti |
+| `AI_API_KEY` | vuota | Chiave del servizio online (solo con `AI_PROVIDER=openai`) |
+| `AI_CONNECT_TIMEOUT` / `AI_READ_TIMEOUT` | `5s` / `180s` | Attesa massima per collegarsi al servizio AI e per ricevere la risposta |
+| `AI_ASSISTANT_RATE_LIMIT_CAPACITY` / `AI_ASSISTANT_RATE_LIMIT_PERIOD` | `10` / `1m` | Domande all'assistente consentite per utente |
 
-Lo stesso comando avvia MySQL 8 e il backend, insieme agli altri servizi del progetto descritti nel README principale. All'avvio Flyway applica le migrazioni dello schema e carica i dati demo. Il Dockerfile scarica le dipendenze Maven in un layer separato (le build successive riusano la cache se il `pom.xml` non cambia), l'applicazione gira con un utente non-root e il container ha un `HEALTHCHECK` sull'endpoint di Actuator. Il build è multi-stage (Maven → JRE), MySQL ha un healthcheck e l'app attende che sia pronto.
+Con una GPU NVIDIA si può far usare la scheda video a Ollama aggiungendo il secondo file di compose:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+```
+
+Lo stesso comando avvia MySQL 8, Ollama e il backend, insieme agli altri servizi del progetto descritti nel README principale. Al primo avvio `ollama-init` scarica il modello (circa 3,4 GB); il backend parte subito e le funzioni AI si attivano appena il modello è pronto (vedi [Funzionalità AI](#funzionalità-ai)). All'avvio Flyway applica le migrazioni dello schema e carica i dati demo. Il Dockerfile scarica le dipendenze Maven in un layer separato (le build successive riusano la cache se il `pom.xml` non cambia), l'applicazione gira con un utente non-root e il container ha un `HEALTHCHECK` sull'endpoint di Actuator. Il build è multi-stage (Maven → JRE), MySQL ha un healthcheck e l'app attende che sia pronto.
 
 ### Utenti precaricati
 
@@ -319,7 +486,12 @@ Tutti con password `password123`:
 | `shanks_player` | USER |
 | `zoro_player` | USER |
 
-Ogni squadra demo ha come proprietario il suo capitano: `manuel22` (Straw Hat FC), `law_organizer` (Heart Pirates e Blackbeard City), `shanks_player` (Red Hair United). Il torneo di esempio è in stato `DRAFT` con 4 squadre iscritte e `law_organizer` come organizzatore: è possibile lanciare subito `generate-rounds` e vedere il calendario generato dal metodo del cerchio.
+Ogni squadra demo ha come proprietario il suo capitano: `manuel22` (Straw Hat FC), `law_organizer` (Heart Pirates e Blackbeard City), `shanks_player` (Red Hair United). I tornei di esempio sono due, entrambi con `law_organizer` come organizzatore:
+
+- **Grand Line Cup** (id 1) — stato `DRAFT` con 4 squadre iscritte: è possibile lanciare subito `generate-rounds` e vedere il calendario generato dal metodo del cerchio.
+- **New World League** (id 2) — stato `ACTIVE` con 8 squadre (alle 4 precedenti si aggiungono Marine Ford, Kid Pirates, Whitebeard Rovers e Big Mom Pirates, di proprietà di `law_organizer`) e 7 giornate. Le giornate 1-3 sono giocate; nella giornata 4 manca solo **Whitebeard Rovers - Straw Hat FC** (partita con id `116`): inserendo quel risultato la giornata si completa e parte la cronaca AI. Le giornate 1-3 non hanno ancora una cronaca e si possono generare con il `POST` di rigenerazione.
+
+Per ripartire dai dati demo originali: `docker compose down` e poi `docker volume rm leaguemate_mysql_data` (il modello AI, nel volume `leaguemate_ollama_data`, resta scaricato).
 
 ---
 
@@ -346,26 +518,43 @@ export FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/demo   # facoltativo
 ./mvnw spring-boot:run
 ```
 
+In locale il backend cerca Ollama su `http://localhost:11434`. Il servizio `ollama` del compose non espone porte, quindi per le funzioni AI serve Ollama installato sul PC (da [ollama.com](https://ollama.com), poi `ollama pull qwen3.5:4b`) oppure un servizio online configurato con le variabili `AI_*`. In alternativa `AI_ENABLED=false` disattiva l'AI: tutto il resto funziona normalmente.
+
 ---
 
 ## Testing
 
-**171 test** con JUnit 5, Mockito, Spring Security Test e MockMvc — tutti verdi.
-**Code coverage: 94%** (requisito minimo 35%).
+**246 test** con JUnit 5, Mockito, Spring Security Test e MockMvc — tutti verdi.
+**Code coverage: 95%** (requisito minimo 35%).
+
+Nessun test richiede Ollama: nei test l'AI è disattivata (`app.ai.enabled=false`) oppure il modello è simulato con Mockito o con `MockRestServiceServer`.
 
 ### Test unitari (service, security, exception)
 
 | Classe testata | Test | Descrizione |
 |---|---|---|
-| `TournamentServiceImpl` | 43 | CRUD, **generazione calendario** (anche andata e ritorno), **classifica**, **statistiche**, co-organizzatori, chiusura torneo, calendario e squadre iscritte |
+| `TournamentServiceImpl` | 45 | CRUD, **generazione calendario** (anche andata e ritorno), **classifica** (anche fino a una giornata), **statistiche**, co-organizzatori, chiusura torneo, calendario e squadre iscritte |
 | `UserServiceImpl` | 18 | Registrazione, ruoli, **profilo con autorizzazione a livello di risorsa** |
 | `TeamServiceImpl` | 10 | CRUD completo, proprietario e capitano alla creazione, unicità nome, vincoli di cancellazione |
 | `TeamMemberServiceImpl` | 10 | Aggiunta membri, duplicati, rimozione vincolata alla squadra |
 | `GlobalExceptionHandler` | 8 | 400, 401, 404, 409, 500, token non valido e mascheramento messaggi |
-| `MatchServiceImpl` | 7 | Aggiornamento risultato, blocco su torneo non attivo, giornata inesistente, caricamento eager |
+| `MatchServiceImpl` | 10 | Aggiornamento risultato, blocco su torneo non attivo, giornata inesistente, caricamento eager, **avvio della cronaca solo all'ultima partita della giornata** |
 | `AuthServiceImpl` | 6 | Registrazione con hashing, login, rinnovo, logout e logout-all |
 | `LoginRateLimitFilter` | 2 | Pulizia dei contatori inattivi del rate limit |
 | `TournamentControllerSecurityTest` | 3 | **403 con USER, 201 con ORGANIZER** (`@WebMvcTest`) |
+
+### Test unitari della parte AI
+
+| Classe testata | Test | Descrizione |
+|---|---|---|
+| `RoundRecapService` | 16 | Cronaca `READY`, Ollama irraggiungibile o risposta vuota → `FAILED`, errori inattesi, AI disattivata, lettura e rigenerazione, cronache `PENDING` interrotte, generazioni contemporanee, pulizia del markdown |
+| `TournamentTools` | 9 | I 4 tool, risultati scritti a parole, nome della squadra senza maiuscole, giornata o squadra inesistente, tool sconosciuto |
+| `RoundFactsBuilder` | 7 | **Formato esatto dei fatti**, vittoria in casa e in trasferta, plurali, righe facoltative, ultima giornata, parità in testa, squadra a riposo |
+| `TournamentAssistantService` | 7 | System prompt compilato, ciclo con tool, limite di 4 passaggi, Ollama irraggiungibile → `UNAVAILABLE`, AI disattivata, torneo inesistente |
+| `OpenAiCompatibleClient` | 6 | Chiave API, argomenti dei tool da stringa JSON, id mancanti, indirizzo con barra finale, errori |
+| `OllamaAiClient` | 5 | `think: false` e opzioni, tool call, nuovo tentativo senza `think`, timeout, modello non scaricato |
+| `AiClientConfig` | 4 | Scelta del provider, AI disattivata, provider non valido senza bloccare l'avvio |
+| `AssistantRateLimiter` | 3 | Limite superato, limite per utente, pulizia dei contatori |
 
 ### Test di integrazione (H2 in memoria, `@SpringBootTest` + MockMvc)
 
@@ -376,7 +565,9 @@ export FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/demo   # facoltativo
 | `InputValidationIntegrationTest` | 6 | Valori al limite: lunghezze allineate alle colonne del database, password oltre il limite di BCrypt, punti incoerenti |
 | `TournamentFlowIntegrationTest` | 10 | Ciclo di vita completo del torneo end-to-end |
 | `InfrastructureIntegrationTest` | 6 | Rate limit sul login, health check, specifica OpenAPI |
-| `MySqlSchemaIntegrationTest` | 1 | Migrazioni Flyway e dati demo su **MySQL 8 reale** (Testcontainers) |
+| `MySqlSchemaIntegrationTest` | 3 | Migrazioni Flyway e dati demo su **MySQL 8 reale** (Testcontainers), classifica fino a una giornata sul torneo demo, tabella `ai_round_recaps` |
+| `RoundRecapIntegrationTest` | 6 | Cronaca con Ollama irraggiungibile: 401, `NOT_AVAILABLE`, 404, 403 per USER, 409, risultato salvato subito e cronaca in `FAILED` senza mai un 500 |
+| `AssistantIntegrationTest` | 5 | 401, 400 per domanda vuota o troppo lunga, 404, AI disattivata → `UNAVAILABLE`, 429 oltre il rate limit |
 | `AuthorizationRulesIntegrationTest` | 20 | Ownership dei tornei (compreso l'ultimo organizzatore) e delle squadre, chiusura torneo, andata e ritorno, paginazione, calendario, squadre iscritte, i miei tornei, CORS, membri, privacy di email e telefono, 401/400/404/409 |
 | `ApiApplicationTests` | 1 | Caricamento del contesto Spring |
 
@@ -387,12 +578,15 @@ I test di integrazione girano su un database H2 in memoria (profilo `test`) su c
 | Package | Coverage |
 |---|---|
 | `security` | 92% |
-| `exception` | 83% |
-| `service.impl` | 97% |
+| `exception` | 86% |
+| `service.impl` | 98% |
 | `mapper` | 99% |
 | `config` | 100% |
-| `controller` | 89% |
-| **Totale** | **94%** |
+| `controller` | 90% |
+| `ai.client` | 92% |
+| `ai.recap` | 99% |
+| `ai.assistant` | 98% |
+| **Totale** | **95%** |
 
 > `dto` ed `entity` sono esclusi dal report (boilerplate Lombok). I controller sono **inclusi** e coperti dai test di integrazione.
 
@@ -416,8 +610,9 @@ A ogni push su `main` e a ogni pull request GitHub Actions (`.github/workflows/c
 |---|---|
 | Codice sorgente completo | ✅ |
 | Script SQL (migrazioni Flyway in `db/migration` + dati demo in `db/demo`) | ✅ |
-| Collection Postman in `docs/` (48 richieste, 9 cartelle; login, refresh e logout gestiti in automatico) | ✅ |
-| Script Docker (`backend/Dockerfile` + `docker-compose.yml` nella cartella principale) | ✅ |
+| Collection Postman in `docs/` (52 richieste, 10 cartelle, compresa la cartella AI; login, refresh e logout gestiti in automatico) | ✅ |
+| Script Docker (`backend/Dockerfile`, `docker-compose.yml` con Ollama e `docker-compose.gpu.yml` facoltativo, nella cartella principale) | ✅ |
+| Funzionalità AI con LLM locale (cronaca della giornata e assistente con tool calling) | ✅ |
 
 ---
 
