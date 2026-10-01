@@ -119,7 +119,7 @@ public class RoundRecapService {
         return recapRepository.save(recap);
     }
 
-    static String removeMarkdown(String text) {
+    public static String removeMarkdown(String text) {
         return text.replace("**", "")
                 .replace("__", "")
                 .replaceAll("(?m)^\\s*#+\\s*", "")

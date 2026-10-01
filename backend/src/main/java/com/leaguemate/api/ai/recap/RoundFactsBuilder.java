@@ -64,7 +64,7 @@ public class RoundFactsBuilder {
         facts.append('\n');
     }
 
-    private String describeResult(Match match) {
+    public static String describeResult(Match match) {
         String home = match.getHomeTeam().getName();
         String away = match.getAwayTeam().getName();
         int homeScore = match.getHomeScore();

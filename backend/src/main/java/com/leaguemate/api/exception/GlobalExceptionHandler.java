@@ -79,6 +79,15 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "Conflict", "The request conflicts with existing data");
     }
 
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<Object> handleTooManyRequests(TooManyRequestsException ex) {
+        Map<String, Object> body = baseBody(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(body);
+    }
+
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<Object> handleInvalidToken(InvalidTokenException ex) {
         return build(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage());
