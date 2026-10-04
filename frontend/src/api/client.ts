@@ -1,8 +1,11 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { clearTokens, getAccessToken, getRefreshToken, saveTokens } from './tokens'
+import { translateError } from '../utils/errorMessages'
 import type { ApiError, TokenResponse } from './types'
 
 type RetriableRequest = InternalAxiosRequestConfig & { retried?: boolean }
+
+const PUBLIC_AUTH_URLS = ['/auth/login', '/auth/register', '/auth/refresh']
 
 export const api = axios.create({ baseURL: '/api' })
 
@@ -51,8 +54,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config as RetriableRequest | undefined
-    const isAuthCall = original?.url?.startsWith('/auth/') ?? false
-    if (error.response?.status !== 401 || !original || original.retried || isAuthCall) {
+    const isPublicAuthCall = PUBLIC_AUTH_URLS.includes(original?.url ?? '')
+    if (error.response?.status !== 401 || !original || original.retried || isPublicAuthCall) {
       return Promise.reject(error)
     }
     original.retried = true
@@ -71,10 +74,10 @@ export function errorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiError>(error)) {
     const data = error.response?.data
     if (data?.messages?.length) {
-      return data.messages.join(', ')
+      return data.messages.map(translateError).join(', ')
     }
     if (data?.message) {
-      return data.message
+      return translateError(data.message)
     }
     if (!error.response) {
       return 'Server non raggiungibile'

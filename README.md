@@ -120,7 +120,7 @@ Le giornate già giocate non hanno ancora una cronaca: chi gestisce il torneo pu
 
 ## Configurazione
 
-Nessuna configurazione è obbligatoria: ogni variabile ha un valore predefinito. Per cambiarle si copia `.env.example` in `.env` e si modificano i valori (porte con `WEB_PORT`, `API_PORT`, `DB_PORT`, per esempio `DB_PORT=3307` se la porta 3306 è già occupata da un MySQL installato sul PC; AI con le variabili `AI_*`). L'elenco completo è nel [README del backend](backend/README.md#avvio-con-docker-consigliato).
+Nessuna configurazione è obbligatoria: ogni variabile ha un valore predefinito. Per cambiarle si copia `.env.example` in `.env` e si modificano i valori (porte con `WEB_PORT`, `API_PORT`, `DB_PORT`; AI con le variabili `AI_*`). Il database è esposto sulla porta **3307**, così non si scontra con un MySQL già installato sul PC. L'elenco completo è nel [README del backend](backend/README.md#avvio-con-docker-consigliato).
 
 ---
 
@@ -146,37 +146,24 @@ Funziona con qualsiasi servizio compatibile con le API di OpenAI (OpenRouter, Op
 
 ## Sviluppo in locale
 
-Per lavorare sul codice con il ricaricamento automatico si avviano database e AI con Docker, e backend e frontend a parte.
+Il modo più semplice per lavorare sul frontend: database, AI e backend in Docker, frontend con Vite, che aggiorna la pagina appena si salva un file.
 
 ```bash
-docker compose up -d db ollama ollama-init
-```
-
-**Backend** (Java 21):
-
-```bash
-cd backend
-export FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/demo
-./mvnw spring-boot:run
-```
-
-In locale il backend cerca Ollama su `http://localhost:11434`, che il compose non espone: per l'AI serve Ollama installato sul PC oppure un servizio online (vedi sopra), altrimenti `AI_ENABLED=false`.
-
-**Frontend** (Node.js 22):
-
-```bash
+docker compose up -d db ollama ollama-init api
 cd frontend
 npm install
 npm run dev
 ```
 
-Il frontend è su http://localhost:5173 e il server di sviluppo di Vite inoltra le chiamate `/api` al backend su `localhost:8080`.
+Il frontend è su http://localhost:5173 e Vite inoltra le chiamate `/api` al backend su `localhost:8080`. Dopo una modifica al backend basta ricostruirlo con `docker compose up -d --build api`.
+
+Per avviare il backend fuori da Docker (Java 21, Maven) vedi la sezione [Avvio in locale del README del backend](backend/README.md#avvio-in-locale).
 
 ---
 
 ## Test e qualità
 
-- **Backend:** 260 test (JUnit 5, Mockito, MockMvc, Spring Security Test), tutti verdi, con una **copertura del 95%** misurata con JaCoCo. Un test usa un **MySQL 8 reale** con Testcontainers e viene saltato se Docker non è disponibile. Nessun test richiede Ollama: l'AI è disattivata o simulata.
+- **Backend:** 264 test (JUnit 5, Mockito, MockMvc, Spring Security Test), tutti verdi, con una **copertura del 95%** misurata con JaCoCo. Un test usa un **MySQL 8 reale** con Testcontainers e viene saltato se Docker non è disponibile. Nessun test richiede Ollama: l'AI è disattivata o simulata.
 
   ```bash
   cd backend

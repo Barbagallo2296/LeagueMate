@@ -5,6 +5,7 @@ import com.leaguemate.api.dto.CreateTeamRequest;
 import com.leaguemate.api.dto.CreateTournamentRequest;
 import com.leaguemate.api.dto.LoginRequest;
 import com.leaguemate.api.dto.RegisterRequest;
+import com.leaguemate.api.dto.UpdateMatchResultRequest;
 import com.leaguemate.api.dto.UpdateTournamentRequest;
 import com.leaguemate.api.entity.Role;
 import com.leaguemate.api.entity.User;
@@ -165,5 +166,16 @@ class InputValidationIntegrationTest {
                         .content(objectMapper.writeValueAsString(new UpdateTournamentRequest("Torneo", "2026/2027", 1, 3))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    @DisplayName("Risultato: un punteggio oltre 99 da' 400 prima di toccare la partita")
+    void updateMatchResult_RejectsScoreAbove99() throws Exception {
+        mockMvc.perform(put("/api/matches/999/result")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateMatchResultRequest(100, 0))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.messages[0]").value("homeScore: Score cannot exceed 99"));
     }
 }

@@ -43,7 +43,7 @@ public class TournamentTools {
                         objectSchema(Map.of(), List.of())),
                 new ToolDefinition(GET_TOURNAMENT_STATS,
                         "Statistiche del torneo: squadre iscritte, partite giocate e da giocare, gol totali, "
-                                + "media gol a partita e miglior attacco.",
+                                + "media gol a partita, miglior attacco e miglior difesa.",
                         objectSchema(Map.of(), List.of())),
                 new ToolDefinition(GET_ROUND,
                         "Partite di una giornata con i risultati (o 'da giocare').",
@@ -111,7 +111,27 @@ public class TournamentTools {
         result.put("miglior_attacco", stats.topScoringTeam() != null
                 ? stats.topScoringTeam() + " (" + stats.topScoringTeamGoals() + " gol)"
                 : "nessun gol segnato");
+        bestDefense(tournamentService.calculateStandings(tournamentId))
+                .ifPresent(text -> result.put("miglior_difesa", text));
         return result;
+    }
+
+    private Optional<String> bestDefense(List<StandingEntry> standings) {
+        List<StandingEntry> played = standings.stream()
+                .filter(entry -> entry.wins() + entry.draws() + entry.losses() > 0)
+                .toList();
+        if (played.isEmpty()) {
+            return Optional.empty();
+        }
+        int fewest = played.stream().mapToInt(StandingEntry::goalsAgainst).min().orElseThrow();
+        List<String> names = played.stream()
+                .filter(entry -> entry.goalsAgainst() == fewest)
+                .map(StandingEntry::teamName)
+                .toList();
+        String teams = names.size() == 1
+                ? names.getFirst()
+                : String.join(", ", names.subList(0, names.size() - 1)) + " e " + names.getLast();
+        return Optional.of(teams + " (" + fewest + (fewest == 1 ? " gol subito)" : " gol subiti)"));
     }
 
     private Map<String, Object> round(Long tournamentId, Object roundArgument) {

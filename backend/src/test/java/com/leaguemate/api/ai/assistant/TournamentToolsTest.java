@@ -95,6 +95,50 @@ class TournamentToolsTest {
     }
 
     @Test
+    @DisplayName("get_tournament_stats: miglior difesa già calcolata dal backend, al singolare")
+    void stats_IncludesBestDefense() {
+        when(tournamentService.getTournamentStats(2L)).thenReturn(
+                new TournamentStatsResponse(2L, "New World League", 3, 6, 4, 2, 9, 2.25, "Heart Pirates", 5));
+        when(tournamentService.calculateStandings(2L)).thenReturn(List.of(
+                new StandingEntry("Heart Pirates", 6, 2, 0, 1, 5, 3, 2),
+                new StandingEntry("Marine Ford", 4, 1, 1, 0, 2, 1, 1),
+                new StandingEntry("Kid Pirates", 0, 0, 0, 2, 2, 5, -3)));
+
+        JsonNode json = run(noArguments("get_tournament_stats"));
+
+        assertEquals("Marine Ford (1 gol subito)", json.get("miglior_difesa").asString());
+    }
+
+    @Test
+    @DisplayName("get_tournament_stats: miglior difesa a pari merito elenca tutte le squadre")
+    void stats_BestDefenseTie_ListsAllTeams() {
+        when(tournamentService.getTournamentStats(2L)).thenReturn(
+                new TournamentStatsResponse(2L, "New World League", 3, 6, 3, 3, 6, 2.0, "Heart Pirates", 3));
+        when(tournamentService.calculateStandings(2L)).thenReturn(List.of(
+                new StandingEntry("Heart Pirates", 3, 1, 0, 1, 3, 2, 1),
+                new StandingEntry("Marine Ford", 3, 1, 0, 1, 2, 2, 0),
+                new StandingEntry("Kid Pirates", 3, 1, 0, 1, 1, 2, -1)));
+
+        JsonNode json = run(noArguments("get_tournament_stats"));
+
+        assertEquals("Heart Pirates, Marine Ford e Kid Pirates (2 gol subiti)", json.get("miglior_difesa").asString());
+    }
+
+    @Test
+    @DisplayName("get_tournament_stats: senza partite giocate la miglior difesa non compare")
+    void stats_NoMatchesPlayed_HasNoBestDefense() {
+        when(tournamentService.getTournamentStats(2L)).thenReturn(
+                new TournamentStatsResponse(2L, "Grand Line Cup", 2, 0, 0, 0, 0, 0.0, null, 0));
+        when(tournamentService.calculateStandings(2L)).thenReturn(List.of(
+                new StandingEntry("Heart Pirates", 0, 0, 0, 0, 0, 0, 0),
+                new StandingEntry("Kid Pirates", 0, 0, 0, 0, 0, 0, 0)));
+
+        JsonNode json = run(noArguments("get_tournament_stats"));
+
+        assertFalse(json.has("miglior_difesa"));
+    }
+
+    @Test
     @DisplayName("get_round: risultato già scritto in italiano, 'da giocare' per le partite future")
     void round_DescribesResults() {
         when(tournamentService.getRounds(2L)).thenReturn(List.of(

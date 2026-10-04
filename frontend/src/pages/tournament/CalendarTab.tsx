@@ -46,6 +46,7 @@ export function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
             <input
               type="number"
               min={0}
+              max={99}
               required
               value={homeScore}
               onChange={(event) => setHomeScore(event.target.value)}
@@ -56,6 +57,7 @@ export function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
             <input
               type="number"
               min={0}
+              max={99}
               required
               value={awayScore}
               onChange={(event) => setAwayScore(event.target.value)}

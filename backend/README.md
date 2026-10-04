@@ -455,7 +455,7 @@ cp .env.example .env
 
 | Variabile | Default | Uso |
 |---|---|---|
-| `DB_PORT` / `API_PORT` | `3306` / `8080` | Porte esposte sulla macchina (per esempio `DB_PORT=3307` se c'è già un MySQL locale) |
+| `DB_PORT` / `API_PORT` | `3307` / `8080` | Porte esposte sulla macchina. Il database usa la 3307 per non scontrarsi con un MySQL già installato sul PC; il backend lo raggiunge comunque dalla rete interna di Docker |
 | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` | `root`, `leaguemate_db`, `leaguemate_user`, `leaguemate_pass` | Credenziali del database |
 | `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL` | `15m` / `7d` | Durata dei token |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Origini del frontend ammesse |
@@ -532,7 +532,7 @@ In locale il backend cerca Ollama su `http://localhost:11434`. Il servizio `olla
 
 ## Testing
 
-**260 test** con JUnit 5, Mockito, Spring Security Test e MockMvc — tutti verdi.
+**264 test** con JUnit 5, Mockito, Spring Security Test e MockMvc — tutti verdi.
 **Code coverage: 95%** (requisito minimo 35%).
 
 Nessun test richiede Ollama: nei test l'AI è disattivata (`app.ai.enabled=false`) oppure il modello è simulato con Mockito o con `MockRestServiceServer`.
@@ -556,7 +556,7 @@ Nessun test richiede Ollama: nei test l'AI è disattivata (`app.ai.enabled=false
 | Classe testata | Test | Descrizione |
 |---|---|---|
 | `RoundRecapService` | 16 | Cronaca `READY`, Ollama irraggiungibile o risposta vuota → `FAILED`, errori inattesi, AI disattivata, lettura e rigenerazione, cronache `PENDING` interrotte, generazioni contemporanee, pulizia del markdown |
-| `TournamentTools` | 10 | I 4 tool, risultati scritti a parole, nome della squadra senza maiuscole, giornata o squadra inesistente, tool sconosciuto, classifica senza partite giocate (nessuna squadra in testa) |
+| `TournamentTools` | 13 | I 4 tool, risultati scritti a parole, nome della squadra senza maiuscole, giornata o squadra inesistente, tool sconosciuto, classifica senza partite giocate (nessuna squadra in testa), **miglior difesa già calcolata** (anche a pari merito o assente) |
 | `RoundFactsBuilder` | 7 | **Formato esatto dei fatti**, vittoria in casa e in trasferta, plurali, righe facoltative, ultima giornata, parità in testa, squadra a riposo |
 | `TournamentAssistantService` | 7 | System prompt compilato, ciclo con tool, limite di 4 passaggi, Ollama irraggiungibile → `UNAVAILABLE`, AI disattivata, torneo inesistente |
 | `OpenAiCompatibleClient` | 6 | Chiave API, argomenti dei tool da stringa JSON, id mancanti, indirizzo con barra finale, errori |
@@ -571,7 +571,7 @@ Nessun test richiede Ollama: nei test l'AI è disattivata (`app.ai.enabled=false
 | `AuthIntegrationTest` | 10 | Flusso register→login→endpoint protetto, RBAC, 401 identici, password mai esposta |
 | `AccountIntegrationTest` | 6 | Modifica dei dati dell'account, email già usata (409), dati non validi (400), cambio password con vecchio token e vecchia password rifiutati, 401 senza token |
 | `TokenAuthenticationIntegrationTest` | 10 | Token opachi, hash nel database, rotazione dei refresh token, logout, logout-all, scadenze, pulizia automatica |
-| `InputValidationIntegrationTest` | 6 | Valori al limite: lunghezze allineate alle colonne del database, password oltre il limite di BCrypt, punti incoerenti |
+| `InputValidationIntegrationTest` | 7 | Valori al limite: lunghezze allineate alle colonne del database, password oltre il limite di BCrypt, punti incoerenti, punteggio oltre 99 |
 | `TournamentFlowIntegrationTest` | 10 | Ciclo di vita completo del torneo end-to-end |
 | `InfrastructureIntegrationTest` | 6 | Rate limit sul login, health check, specifica OpenAPI |
 | `MySqlSchemaIntegrationTest` | 3 | Migrazioni Flyway e dati demo su **MySQL 8 reale** (Testcontainers), classifica fino a una giornata sul torneo demo, tabella `ai_round_recaps` |
