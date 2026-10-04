@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import NewTournamentPage from './pages/NewTournamentPage'
 import RegisterPage from './pages/RegisterPage'
+import TournamentDetailPage from './pages/TournamentDetailPage'
 import TournamentsPage from './pages/TournamentsPage'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<TournamentsPage />} />
           <Route path="/tournaments/new" element={<NewTournamentPage />} />
+          <Route path="/tournaments/:id" element={<TournamentDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
