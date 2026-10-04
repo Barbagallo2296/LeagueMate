@@ -8,6 +8,7 @@ export interface AuthContextValue {
   canOrganize: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  updateUser: (user: User) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

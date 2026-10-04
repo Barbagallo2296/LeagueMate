@@ -19,6 +19,10 @@ public interface UserService {
 
     User updateRole(Long id, Role role);
 
+    User updateAccount(Long userId, String firstName, String lastName, String email);
+
+    void updatePassword(Long userId, String encodedPassword);
+
     UserProfileResponse getProfile(Long userId);
 
     UserProfileResponse updateProfile(Long userId, UpdateUserProfileRequest request, User requester);

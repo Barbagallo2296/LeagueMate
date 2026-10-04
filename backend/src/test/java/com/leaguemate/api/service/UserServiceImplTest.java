@@ -10,6 +10,7 @@ import com.leaguemate.api.exception.ResourceNotFoundException;
 import com.leaguemate.api.repository.UserRepository;
 import com.leaguemate.api.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -279,5 +280,53 @@ class UserServiceImplTest {
         assertNotNull(user.getProfile());
         assertEquals("Full Stack Developer", response.bio());
         assertEquals(user, user.getProfile().getUser());
+    }
+
+    @Test
+    @DisplayName("updateAccount: aggiorna nome, cognome ed email togliendo gli spazi")
+    void updateAccount_Success() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmail("nuova@test.com")).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User updated = userService.updateAccount(1L, " Mario ", "Rossi ", " nuova@test.com ");
+
+        assertEquals("Mario", updated.getFirstName());
+        assertEquals("Rossi", updated.getLastName());
+        assertEquals("nuova@test.com", updated.getEmail());
+    }
+
+    @Test
+    @DisplayName("updateAccount: email già usata da un altro utente restituisce conflitto")
+    void updateAccount_EmailTaken_ThrowsConflict() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmail("altro@test.com")).thenReturn(true);
+
+        assertThrows(ResourceConflictException.class,
+                () -> userService.updateAccount(1L, "Manuel", "Barbagallo", "altro@test.com"));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("updateAccount: la propria email (anche con maiuscole diverse) non è un conflitto")
+    void updateAccount_SameEmail_DoesNotCheckUniqueness() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User updated = userService.updateAccount(1L, "Manuel", "B.", "MANUEL@test.com");
+
+        assertEquals("B.", updated.getLastName());
+        verify(userRepository, never()).existsByEmail(any());
+    }
+
+    @Test
+    @DisplayName("updatePassword: salva la password già cifrata")
+    void updatePassword_SavesEncodedPassword() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        userService.updatePassword(1L, "nuovoHash");
+
+        assertEquals("nuovoHash", user.getPassword());
+        verify(userRepository).save(user);
     }
 }

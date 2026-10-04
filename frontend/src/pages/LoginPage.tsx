@@ -3,8 +3,10 @@ import { useForm } from 'react-hook-form'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { errorMessage } from '../api/client'
 import { useAuth } from '../auth/authContext'
+import AuthShell from '../components/AuthShell'
 import ErrorMessage from '../components/ErrorMessage'
 import TextField from '../components/TextField'
+import Button from '../components/ui/Button'
 
 interface LoginForm {
   username: string
@@ -22,7 +24,8 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>()
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/'
+  const state = location.state as { from?: string; notice?: string } | null
+  const from = state?.from ?? '/'
 
   if (user) {
     return <Navigate to={from} replace />
@@ -39,13 +42,17 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="w-full max-w-sm space-y-4 rounded-xl bg-white p-8 shadow"
-      >
-        <h1 className="text-center text-3xl font-bold text-blue-700">LeagueMate</h1>
-        <p className="text-center text-slate-600">Accedi per vedere i tornei</p>
+    <AuthShell>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div>
+          <h2 className="font-display text-4xl font-bold uppercase tracking-wide">Accedi</h2>
+          <p className="mt-1 text-muted">Bentornato! Inserisci le tue credenziali.</p>
+        </div>
+        {state?.notice && !error && (
+          <p role="status" className="rounded-lg border border-lime/30 bg-lime/10 px-3 py-2 text-sm text-lime">
+            {state.notice}
+          </p>
+        )}
         {error && <ErrorMessage message={error} />}
         <TextField
           label="Username"
@@ -60,20 +67,16 @@ export default function LoginPage() {
           error={errors.password?.message}
           {...register('password', { required: 'Inserisci la password' })}
         />
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-lg bg-blue-700 py-2 font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
-        >
+        <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
           {isSubmitting ? 'Accesso in corso...' : 'Accedi'}
-        </button>
-        <p className="text-center text-sm text-slate-600">
+        </Button>
+        <p className="text-center text-sm text-muted">
           Non hai un account?{' '}
-          <Link to="/register" className="font-medium text-blue-700 hover:underline">
+          <Link to="/register" className="font-bold text-lime hover:underline">
             Registrati
           </Link>
         </p>
       </form>
-    </main>
+    </AuthShell>
   )
 }

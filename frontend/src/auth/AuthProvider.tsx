@@ -46,7 +46,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const canOrganize = isAdmin || user?.role === 'ORGANIZER'
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, canOrganize, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, canOrganize, login, logout, updateUser: setUser }}>
       {children}
     </AuthContext.Provider>
   )

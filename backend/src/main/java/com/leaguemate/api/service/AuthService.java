@@ -9,4 +9,5 @@ public interface AuthService {
     TokenResponse refresh(String refreshToken);
     void logout(String accessToken);
     void logoutAll(String username);
+    void changePassword(Long userId, String currentPassword, String newPassword);
 }

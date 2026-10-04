@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { Navigate, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 import { errorMessage } from '../api/client'
 import { createTournament, type NewTournamentData } from '../api/tournaments'
 import { useAuth } from '../auth/authContext'
 import ErrorMessage from '../components/ErrorMessage'
 import TextField from '../components/TextField'
+import Button from '../components/ui/Button'
 
 export default function NewTournamentPage() {
   const { canOrganize } = useAuth()
@@ -21,7 +22,7 @@ export default function NewTournamentPage() {
     mutationFn: createTournament,
     onSuccess: (tournament) => {
       queryClient.invalidateQueries({ queryKey: ['tournaments'] })
-      navigate(`/tournaments/${tournament.id}`)
+      navigate(`/tornei/${tournament.id}`)
     },
   })
 
@@ -30,11 +31,17 @@ export default function NewTournamentPage() {
   }
 
   return (
-    <section className="mx-auto max-w-lg">
-      <h1 className="mb-6 text-2xl font-bold text-slate-800">Nuovo torneo</h1>
+    <section className="mx-auto max-w-lg space-y-6">
+      <div>
+        <Link to="/" className="text-sm text-muted hover:text-ink">
+          ← Tornei
+        </Link>
+        <h1 className="mt-2 font-display text-5xl font-bold uppercase leading-none tracking-wide">Nuovo torneo</h1>
+        <p className="mt-2 text-muted">Dopo la creazione potrai iscrivere le squadre e generare il calendario.</p>
+      </div>
       <form
         onSubmit={handleSubmit((values) => mutation.mutate(values))}
-        className="space-y-4 rounded-xl bg-white p-6 shadow"
+        className="space-y-5 rounded-2xl border border-line bg-panel shadow-card p-6"
       >
         {mutation.error && <ErrorMessage message={errorMessage(mutation.error)} />}
         <TextField
@@ -55,17 +62,13 @@ export default function NewTournamentPage() {
             maxLength: { value: 20, message: 'Massimo 20 caratteri' },
           })}
         />
-        <label className="flex items-center gap-2 text-slate-700">
-          <input type="checkbox" className="h-4 w-4" {...register('doubleRoundRobin')} />
+        <label className="flex items-center gap-3 text-reading">
+          <input type="checkbox" className="h-5 w-5 accent-lime" {...register('doubleRoundRobin')} />
           Andata e ritorno
         </label>
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="w-full rounded-lg bg-blue-700 py-2 font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
-        >
+        <Button type="submit" size="lg" disabled={mutation.isPending} className="w-full">
           {mutation.isPending ? 'Creazione in corso...' : 'Crea torneo'}
-        </button>
+        </Button>
       </form>
     </section>
   )

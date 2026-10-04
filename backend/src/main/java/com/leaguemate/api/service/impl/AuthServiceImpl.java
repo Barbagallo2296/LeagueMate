@@ -2,6 +2,7 @@ package com.leaguemate.api.service.impl;
 
 import com.leaguemate.api.dto.TokenResponse;
 import com.leaguemate.api.entity.User;
+import com.leaguemate.api.exception.BadRequestException;
 import com.leaguemate.api.security.TokenService;
 import com.leaguemate.api.service.AuthService;
 import com.leaguemate.api.service.UserService;
@@ -50,5 +51,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logoutAll(String username) {
         tokenService.revokeAll(username);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userService.findById(userId);
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BadRequestException("New password must be different from the current one");
+        }
+
+        userService.updatePassword(userId, passwordEncoder.encode(newPassword));
+        tokenService.revokeAll(user.getUsername());
     }
 }

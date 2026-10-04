@@ -8,12 +8,12 @@ type TextFieldProps = ComponentProps<'input'> & {
 export default function TextField({ label, error, ...inputProps }: TextFieldProps) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+      <span className="mb-1.5 block text-sm font-semibold text-reading">{label}</span>
       <input
         {...inputProps}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-600 focus:outline-none"
+        className="h-11 w-full rounded-lg border border-line bg-field px-3 text-ink placeholder:text-muted focus:border-lime focus:outline-none"
       />
-      {error && <span className="mt-1 block text-sm text-red-600">{error}</span>}
+      {error && <span className="mt-1 block text-sm text-danger">{error}</span>}
     </label>
   )
 }

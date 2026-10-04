@@ -22,3 +22,7 @@ export async function register(input: RegisterData): Promise<User> {
 export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }
+
+export async function logoutAll(): Promise<void> {
+  await api.post('/auth/logout-all')
+}

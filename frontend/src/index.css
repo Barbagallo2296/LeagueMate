@@ -1,1 +1,124 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Barlow Condensed", ui-sans-serif, system-ui, sans-serif;
+
+  --color-night: #0e1116;
+  --color-panel: #161b22;
+  --color-raised: #1d2430;
+  --color-line: #2a313c;
+  --color-track: #2f3846;
+
+  --color-ink: #e6edf3;
+  --color-reading: #c9d1d9;
+  --color-muted: #9ba6b2;
+
+  --color-lime: #22c55e;
+  --color-lime-hover: #4ade80;
+  --color-on-lime: #0e1116;
+
+  --color-ai: #8fdcff;
+  --color-ai-soft: #10283a;
+  --color-ai-line: #1e4560;
+
+  --color-warn: #f5b544;
+  --color-warn-soft: #3a2e12;
+  --color-danger: #ff8080;
+  --color-danger-soft: #3a1717;
+
+  --color-hero: #1d2430;
+  --color-on-hero: #e6edf3;
+  --color-hero-muted: #9ba6b2;
+  --color-hero-track: #2f3846;
+  --color-hero-accent: #22c55e;
+  --color-hero-ai: #8fdcff;
+
+  --color-card-head: #1d2430;
+  --color-on-card-head: #e6edf3;
+  --color-score: #0e1116;
+  --color-on-score: #e6edf3;
+  --color-field: #0e1116;
+  --color-closed: #f87171;
+  --color-closed-soft: #3a1717;
+}
+
+:root {
+  --card-shadow: none;
+}
+
+:root[data-theme="light"] {
+  --color-night: #eceff3;
+  --color-panel: #ffffff;
+  --color-raised: #e8ecf1;
+  --color-line: #d5dbe3;
+  --color-track: #cbd2db;
+
+  --color-ink: #121826;
+  --color-reading: #344054;
+  --color-muted: #5d6676;
+
+  --color-lime: #0b7a4b;
+  --color-lime-hover: #075c38;
+  --color-on-lime: #ffffff;
+
+  --color-ai: #0369a1;
+  --color-ai-soft: #e8f4fc;
+  --color-ai-line: #bfe0f5;
+
+  --color-warn: #8a4b08;
+  --color-warn-soft: #fdf1dc;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+
+  --color-hero: #121826;
+  --color-on-hero: #ffffff;
+  --color-hero-muted: #c3cad5;
+  --color-hero-track: #2b3445;
+  --color-hero-accent: #4ade80;
+  --color-hero-ai: #7dd3fc;
+
+  --color-card-head: #ffffff;
+  --color-on-card-head: #121826;
+  --color-score: #121826;
+  --color-on-score: #ffffff;
+  --color-field: #ffffff;
+  --color-closed: #dc2626;
+  --color-closed-soft: #fdecea;
+
+  --card-shadow: 0 1px 2px rgb(16 24 40 / 0.06), 0 2px 6px rgb(16 24 40 / 0.06);
+}
+
+@utility shadow-card {
+  box-shadow: var(--card-shadow);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  @media (min-width: 1800px) {
+    html {
+      font-size: 17px;
+    }
+  }
+
+  @media (min-width: 2300px) {
+    html {
+      font-size: 19px;
+    }
+  }
+
+  html[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-night font-sans text-ink antialiased;
+  }
+
+  ::selection {
+    @apply bg-lime text-on-lime;
+  }
+}

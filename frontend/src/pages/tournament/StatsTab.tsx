@@ -2,50 +2,41 @@ import { useQuery } from '@tanstack/react-query'
 import { errorMessage } from '../../api/client'
 import { getStats } from '../../api/tournaments'
 import ErrorMessage from '../../components/ErrorMessage'
-import Spinner from '../../components/Spinner'
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function Tile({ label, value, wide = false }: { label: string; value: string | number; wide?: boolean }) {
   return (
-    <div className="rounded-xl bg-white p-4 shadow">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-800">{value}</p>
+    <div className={`rounded-xl border border-line bg-panel shadow-card p-4 ${wide ? 'col-span-2' : ''}`}>
+      <p className="text-xs font-semibold text-muted">{label}</p>
+      <p className="mt-1 font-display text-3xl font-bold text-ink">{value}</p>
     </div>
   )
 }
 
 export default function StatsTab({ tournamentId }: { tournamentId: number }) {
-  const { data, isPending, error } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ['tournament', tournamentId, 'stats'],
     queryFn: () => getStats(tournamentId),
   })
 
-  if (isPending) return <Spinner />
   if (error) return <ErrorMessage message={errorMessage(error)} />
-
-  const progress = data.totalMatches > 0 ? Math.round((data.playedMatches / data.totalMatches) * 100) : 0
+  if (!data) return null
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-xl bg-white p-4 shadow">
-        <div className="mb-2 flex justify-between text-sm text-slate-600">
-          <span>Partite giocate</span>
-          <span>
-            {data.playedMatches} su {data.totalMatches} ({progress}%)
-          </span>
+    <div className="grid grid-cols-2 gap-3">
+      <Tile label="Gol totali" value={data.totalGoals} />
+      <Tile label="Media a partita" value={data.averageGoalsPerMatch.toFixed(2).replace('.', ',')} />
+      <Tile label="Partite giocate" value={data.playedMatches} />
+      <Tile label="Partite da giocare" value={data.remainingMatches} />
+      <div className="col-span-2 flex items-center justify-between gap-3 rounded-xl border border-line bg-panel shadow-card p-4">
+        <div>
+          <p className="text-xs font-semibold text-muted">Miglior attacco</p>
+          <p className="mt-1 font-bold text-ink">{data.topScoringTeam ?? 'Nessun gol ancora'}</p>
         </div>
-        <div className="h-3 rounded-full bg-slate-100">
-          <div className="h-3 rounded-full bg-blue-700" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Squadre iscritte" value={data.registeredTeams} />
-        <StatCard label="Partite da giocare" value={data.remainingMatches} />
-        <StatCard label="Gol totali" value={data.totalGoals} />
-        <StatCard label="Media gol a partita" value={data.averageGoalsPerMatch.toFixed(2)} />
-        <StatCard
-          label="Miglior attacco"
-          value={data.topScoringTeam ? `${data.topScoringTeam} (${data.topScoringTeamGoals})` : '-'}
-        />
+        {data.topScoringTeam && (
+          <p className="font-display text-3xl font-bold text-lime">
+            {data.topScoringTeamGoals} <span className="text-base text-muted">gol</span>
+          </p>
+        )}
       </div>
     </div>
   )

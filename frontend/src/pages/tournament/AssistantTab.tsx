@@ -5,6 +5,7 @@ import { askAssistant } from '../../api/ai'
 import { errorMessage } from '../../api/client'
 import type { AssistantResponse } from '../../api/types'
 import ErrorMessage from '../../components/ErrorMessage'
+import Button from '../../components/ui/Button'
 
 const MAX_LENGTH = 300
 
@@ -34,6 +35,14 @@ const TOOL_LABELS: Record<string, string> = {
   get_tournament_stats: 'Statistiche',
   get_round: 'Giornata',
   get_team_matches: 'Partite di una squadra',
+}
+
+function SparkleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" strokeLinejoin="round" />
+    </svg>
+  )
 }
 
 interface Exchange {
@@ -74,8 +83,8 @@ export default function AssistantTab({ tournamentId }: { tournamentId: number })
     mutationFn: (text: string) => askAssistant(tournamentId, text),
     onSuccess: (response, text) => {
       queryClient.setQueryData<Exchange[]>(historyKey, (previous = []) => [
-        { question: text, response },
         ...previous,
+        { question: text, response },
       ])
     },
   })
@@ -93,38 +102,93 @@ export default function AssistantTab({ tournamentId }: { tournamentId: number })
   }
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-xl bg-white p-5 shadow">
-        <h3 className="font-semibold text-slate-800">Chiedi all'assistente del torneo</h3>
+    <section className="flex flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-card">
+      <header className="flex items-center gap-3 border-b border-line px-5 py-4">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-ai-soft text-ai">
+          <SparkleIcon />
+        </span>
+        <div>
+          <h2 className="font-bold text-ink">Assistente del torneo</h2>
+          <p className="text-xs text-muted">Risponde con i dati veri del torneo</p>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-4 bg-night/40 p-5">
+        {history.length === 0 && !waiting && (
+          <p className="text-sm text-muted">Fai una domanda su classifica, risultati e statistiche del torneo.</p>
+        )}
+        {history.map((exchange, index) => (
+          <div key={index} className="flex flex-col gap-2">
+            <p className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-raised px-4 py-2.5 text-sm text-ink">
+              {exchange.question}
+            </p>
+            {exchange.response.status === 'OK' ? (
+              <div className="flex max-w-[92%] flex-col gap-2 self-start">
+                <p className="whitespace-pre-line rounded-2xl rounded-bl-md border border-line bg-panel px-4 py-3 text-sm leading-relaxed text-reading">
+                  {exchange.response.answer}
+                </p>
+                {exchange.response.toolsUsed.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-muted">Dati consultati:</span>
+                    {[...new Set(exchange.response.toolsUsed)].map((tool) => (
+                      <span key={tool} className="rounded-full bg-ai-soft px-2 py-0.5 font-semibold text-ai">
+                        {TOOL_LABELS[tool] ?? tool}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="max-w-[92%] self-start rounded-2xl rounded-bl-md border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-warn">
+                L'assistente non è disponibile in questo momento. Riprova più tardi.
+              </p>
+            )}
+          </div>
+        ))}
+        {waiting && (
+          <div className="flex flex-col gap-2">
+            <p className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-raised px-4 py-2.5 text-sm text-ink">
+              {waitingQuestions[0]}
+            </p>
+            <p className="flex items-center gap-2 self-start text-sm text-muted">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-ai-line border-t-ai" />
+              Sto consultando i dati del torneo...
+            </p>
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-3 border-t border-line p-5">
+        <label htmlFor="assistant-question" className="block text-sm font-semibold text-reading">
+          La tua domanda
+        </label>
         <textarea
+          id="assistant-question"
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
           maxLength={MAX_LENGTH}
           rows={2}
           placeholder="Es. Quanti punti ha lo Straw Hat FC?"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-600 focus:outline-none"
+          className="w-full resize-y rounded-lg border border-line bg-field px-3 py-2 text-ink placeholder:text-muted focus:border-ai focus:outline-none"
         />
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted">
             {question.length}/{MAX_LENGTH}
           </span>
-          <button
-            type="submit"
-            disabled={waiting || question.trim().length === 0}
-            className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
-          >
+          <Button type="submit" variant="ai" disabled={waiting || question.trim().length === 0}>
             Chiedi
-          </button>
+          </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-          <span className="text-sm text-slate-500">Prova a chiedere:</span>
+        {ask.error && <ErrorMessage message={assistantError(ask.error)} />}
+        <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+          <span className="text-xs text-muted">Prova a chiedere:</span>
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               type="button"
               onClick={() => send(suggestion)}
               disabled={waiting}
-              className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+              className="rounded-full border border-line bg-field px-3 py-1.5 text-sm text-reading transition-colors hover:border-ai hover:text-ink disabled:opacity-50"
             >
               {suggestion}
             </button>
@@ -132,42 +196,12 @@ export default function AssistantTab({ tournamentId }: { tournamentId: number })
           <button
             type="button"
             onClick={() => setSuggestions(randomSuggestions())}
-            className="px-1 text-sm font-medium text-blue-700 hover:underline"
+            className="px-1 py-1.5 text-sm font-semibold text-ai hover:underline"
           >
             Altre domande
           </button>
         </div>
-        {waiting && (
-          <p className="flex items-center gap-2 text-sm text-slate-600">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-            L'assistente sta consultando i dati del torneo per rispondere a: "{waitingQuestions[0]}"
-          </p>
-        )}
-        {ask.error && <ErrorMessage message={assistantError(ask.error)} />}
       </form>
-
-      {history.map((exchange, index) => (
-        <article key={history.length - index} className="space-y-2 rounded-xl bg-white p-5 shadow">
-          <p className="font-medium text-slate-800">{exchange.question}</p>
-          {exchange.response.status === 'OK' ? (
-            <>
-              <p className="whitespace-pre-line text-slate-700">{exchange.response.answer}</p>
-              {exchange.response.toolsUsed.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                  <span className="text-slate-500">Dati consultati:</span>
-                  {[...new Set(exchange.response.toolsUsed)].map((tool) => (
-                    <span key={tool} className="rounded-full bg-blue-50 px-2 py-0.5 font-medium text-blue-700">
-                      {TOOL_LABELS[tool] ?? tool}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-amber-700">L'assistente non è disponibile in questo momento. Riprova più tardi.</p>
-          )}
-        </article>
-      ))}
-    </div>
+    </section>
   )
 }

@@ -2,9 +2,11 @@ package com.leaguemate.api.service;
 
 import com.leaguemate.api.entity.User;
 import com.leaguemate.api.dto.TokenResponse;
+import com.leaguemate.api.exception.BadRequestException;
 import com.leaguemate.api.security.TokenService;
 import com.leaguemate.api.service.impl.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -125,5 +127,49 @@ class AuthServiceImplTest {
         authService.logoutAll("testuser");
 
         Mockito.verify(tokenService, Mockito.times(1)).revokeAll("testuser");
+    }
+
+    @Test
+    @DisplayName("changePassword: cifra la nuova password e chiude tutte le sessioni")
+    void changePassword_Success() {
+        sampleUser.setPassword("hashAttuale");
+        Mockito.when(userService.findById(1L)).thenReturn(sampleUser);
+        Mockito.when(passwordEncoder.matches("vecchiaPassword", "hashAttuale")).thenReturn(true);
+        Mockito.when(passwordEncoder.matches("nuovaPassword", "hashAttuale")).thenReturn(false);
+        Mockito.when(passwordEncoder.encode("nuovaPassword")).thenReturn("hashNuovo");
+
+        authService.changePassword(1L, "vecchiaPassword", "nuovaPassword");
+
+        Mockito.verify(userService).updatePassword(1L, "hashNuovo");
+        Mockito.verify(tokenService).revokeAll("testuser");
+    }
+
+    @Test
+    @DisplayName("changePassword: password attuale sbagliata restituisce errore e non cambia nulla")
+    void changePassword_WrongCurrentPassword_Throws() {
+        sampleUser.setPassword("hashAttuale");
+        Mockito.when(userService.findById(1L)).thenReturn(sampleUser);
+        Mockito.when(passwordEncoder.matches("sbagliata", "hashAttuale")).thenReturn(false);
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> authService.changePassword(1L, "sbagliata", "nuovaPassword"));
+
+        assertEquals("Current password is incorrect", ex.getMessage());
+        Mockito.verify(userService, Mockito.never()).updatePassword(Mockito.anyLong(), anyString());
+        Mockito.verify(tokenService, Mockito.never()).revokeAll(anyString());
+    }
+
+    @Test
+    @DisplayName("changePassword: la nuova password uguale a quella attuale viene rifiutata")
+    void changePassword_SameAsCurrent_Throws() {
+        sampleUser.setPassword("hashAttuale");
+        Mockito.when(userService.findById(1L)).thenReturn(sampleUser);
+        Mockito.when(passwordEncoder.matches("password123", "hashAttuale")).thenReturn(true);
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> authService.changePassword(1L, "password123", "password123"));
+
+        assertEquals("New password must be different from the current one", ex.getMessage());
+        Mockito.verify(userService, Mockito.never()).updatePassword(Mockito.anyLong(), anyString());
     }
 }

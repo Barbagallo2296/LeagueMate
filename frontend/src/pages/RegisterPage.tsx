@@ -4,8 +4,10 @@ import { Link, Navigate, useNavigate } from 'react-router'
 import { register as registerUser, type RegisterData } from '../api/auth'
 import { errorMessage } from '../api/client'
 import { useAuth } from '../auth/authContext'
+import AuthShell from '../components/AuthShell'
 import ErrorMessage from '../components/ErrorMessage'
 import TextField from '../components/TextField'
+import Button from '../components/ui/Button'
 
 export default function RegisterPage() {
   const { user, login } = useAuth()
@@ -33,14 +35,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="w-full max-w-md space-y-4 rounded-xl bg-white p-8 shadow"
-      >
-        <h1 className="text-center text-3xl font-bold text-blue-700">Crea un account</h1>
+    <AuthShell>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div>
+          <h2 className="font-display text-4xl font-bold uppercase tracking-wide">Crea un account</h2>
+          <p className="mt-1 text-muted">Bastano pochi dati per seguire i tornei.</p>
+        </div>
         {error && <ErrorMessage message={error} />}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
           <TextField
             label="Nome"
             error={errors.firstName?.message}
@@ -89,20 +91,16 @@ export default function RegisterPage() {
             maxLength: { value: 72, message: 'Massimo 72 caratteri' },
           })}
         />
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-lg bg-blue-700 py-2 font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
-        >
+        <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
           {isSubmitting ? 'Registrazione in corso...' : 'Registrati'}
-        </button>
-        <p className="text-center text-sm text-slate-600">
+        </Button>
+        <p className="text-center text-sm text-muted">
           Hai già un account?{' '}
-          <Link to="/login" className="font-medium text-blue-700 hover:underline">
+          <Link to="/login" className="font-bold text-lime hover:underline">
             Accedi
           </Link>
         </p>
       </form>
-    </main>
+    </AuthShell>
   )
 }

@@ -78,6 +78,30 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public User updateAccount(Long userId, String firstName, String lastName, String email) {
+        User user = findById(userId);
+        String newEmail = email.strip();
+
+        if (!user.getEmail().equalsIgnoreCase(newEmail) && userRepository.existsByEmail(newEmail)) {
+            throw new ResourceConflictException("Email already registered");
+        }
+
+        user.setFirstName(firstName.strip());
+        user.setLastName(lastName.strip());
+        user.setEmail(newEmail);
+        return userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void updatePassword(Long userId, String encodedPassword) {
+        User user = findById(userId);
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public UserProfileResponse getProfile(Long userId) {
         User user = findById(userId);

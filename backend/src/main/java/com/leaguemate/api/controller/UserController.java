@@ -1,5 +1,7 @@
 package com.leaguemate.api.controller;
 
+import com.leaguemate.api.dto.ChangePasswordRequest;
+import com.leaguemate.api.dto.UpdateAccountRequest;
 import com.leaguemate.api.dto.UpdateUserProfileRequest;
 import com.leaguemate.api.dto.UpdateUserRoleRequest;
 import com.leaguemate.api.dto.UserProfileResponse;
@@ -7,6 +9,7 @@ import com.leaguemate.api.dto.UserResponse;
 import com.leaguemate.api.entity.Role;
 import com.leaguemate.api.entity.User;
 import com.leaguemate.api.mapper.UserMapper;
+import com.leaguemate.api.service.AuthService;
 import com.leaguemate.api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +31,30 @@ public class UserController {
     private static final Set<String> SORTABLE = Set.of("id", "username", "firstName", "lastName", "role");
 
     private final UserService userService;
+    private final AuthService authService;
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(UserMapper.toResponse(currentUser));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserResponse> updateCurrentUser(
+            @Valid @RequestBody UpdateAccountRequest request,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        User updated = userService.updateAccount(
+                currentUser.getId(), request.firstName(), request.lastName(), request.email());
+        return ResponseEntity.ok(UserMapper.toResponse(updated));
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal User currentUser
+    ) {
+        authService.changePassword(currentUser.getId(), request.currentPassword(), request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

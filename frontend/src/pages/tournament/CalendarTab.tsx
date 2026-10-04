@@ -6,6 +6,7 @@ import { getRounds } from '../../api/tournaments'
 import type { Match } from '../../api/types'
 import ErrorMessage from '../../components/ErrorMessage'
 import Spinner from '../../components/Spinner'
+import Button from '../../components/ui/Button'
 
 interface MatchRowProps {
   match: Match
@@ -13,7 +14,10 @@ interface MatchRowProps {
   editable: boolean
 }
 
-function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
+const SCORE_INPUT =
+  'h-9 w-12 rounded-lg border border-line bg-field text-center font-display text-lg font-bold text-ink focus:border-lime focus:outline-none'
+
+export function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [homeScore, setHomeScore] = useState(match.homeScore?.toString() ?? '')
@@ -33,21 +37,19 @@ function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
     mutation.mutate()
   }
 
-  const scoreInput = 'w-14 rounded-lg border border-slate-300 px-2 py-1 text-center'
-
   return (
-    <li className="py-2">
-      <form onSubmit={handleSubmit} className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-3">
-        <span className="text-right font-medium text-slate-800">{match.homeTeamName}</span>
+    <li className="py-3">
+      <form onSubmit={handleSubmit} className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-sm">
+        <span className="text-right font-semibold text-ink">{match.homeTeamName}</span>
         {editing ? (
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1.5 text-muted">
             <input
               type="number"
               min={0}
               required
               value={homeScore}
               onChange={(event) => setHomeScore(event.target.value)}
-              className={scoreInput}
+              className={SCORE_INPUT}
               aria-label={`Gol ${match.homeTeamName}`}
             />
             -
@@ -57,41 +59,43 @@ function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
               required
               value={awayScore}
               onChange={(event) => setAwayScore(event.target.value)}
-              className={scoreInput}
+              className={SCORE_INPUT}
               aria-label={`Gol ${match.awayTeamName}`}
             />
           </span>
         ) : (
           <span
-            className={`min-w-16 rounded-lg px-2 py-1 text-center font-bold ${
-              played ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-500'
+            className={`min-w-16 rounded-md px-2 py-0.5 text-center font-display text-lg font-bold ${
+              played ? 'bg-score text-on-score' : 'border border-line text-muted'
             }`}
           >
             {played ? `${match.homeScore} - ${match.awayScore}` : 'vs'}
           </span>
         )}
-        <span className="font-medium text-slate-800">{match.awayTeamName}</span>
-        <span className="flex gap-2 text-sm">
-          {editable && !editing && (
-            <button type="button" onClick={() => setEditing(true)} className="text-blue-700 hover:underline">
-              {played ? 'Modifica' : 'Risultato'}
-            </button>
-          )}
-          {editing && (
-            <>
+        <span className="font-semibold text-ink">{match.awayTeamName}</span>
+
+        {editable && (
+          <span className="col-span-3 flex justify-center gap-2">
+            {editing ? (
+              <>
+                <Button type="submit" size="sm" disabled={mutation.isPending}>
+                  {mutation.isPending ? 'Salvataggio...' : 'Salva'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+                  Annulla
+                </Button>
+              </>
+            ) : (
               <button
-                type="submit"
-                disabled={mutation.isPending}
-                className="font-semibold text-green-700 hover:underline disabled:opacity-50"
+                type="button"
+                onClick={() => setEditing(true)}
+                className="text-xs font-semibold text-lime hover:underline"
               >
-                Salva
+                {played ? 'Modifica risultato' : 'Inserisci risultato'}
               </button>
-              <button type="button" onClick={() => setEditing(false)} className="text-slate-500 hover:underline">
-                Annulla
-              </button>
-            </>
-          )}
-        </span>
+            )}
+          </span>
+        )}
       </form>
       {mutation.error && (
         <div className="mt-2">
@@ -102,12 +106,7 @@ function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
   )
 }
 
-interface CalendarTabProps {
-  tournamentId: number
-  editable: boolean
-}
-
-export default function CalendarTab({ tournamentId, editable }: CalendarTabProps) {
+export default function CalendarTab({ tournamentId }: { tournamentId: number }) {
   const { data, isPending, error } = useQuery({
     queryKey: ['tournament', tournamentId, 'rounds'],
     queryFn: () => getRounds(tournamentId),
@@ -116,22 +115,28 @@ export default function CalendarTab({ tournamentId, editable }: CalendarTabProps
   if (isPending) return <Spinner />
   if (error) return <ErrorMessage message={errorMessage(error)} />
   if (data.length === 0) {
-    return <p className="text-slate-600">Il calendario non è ancora stato generato.</p>
+    return (
+      <p className="rounded-2xl border border-line bg-panel shadow-card p-6 text-reading">
+        Il calendario non è ancora stato generato.
+      </p>
+    )
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-5 lg:grid-cols-2">
       {data.map((round) => {
         const completed = round.matches.every((match) => match.status === 'COMPLETED')
         return (
-          <article key={round.id} className="rounded-xl bg-white p-4 shadow">
-            <header className="mb-2 flex items-center justify-between">
-              <h3 className="font-semibold text-slate-800">Giornata {round.roundNumber}</h3>
-              {completed && <span className="text-xs font-medium text-green-700">Completata</span>}
+          <article key={round.id} className="rounded-2xl border border-line bg-panel shadow-card p-5">
+            <header className="mb-1 flex items-center justify-between">
+              <h3 className="font-display text-2xl font-bold uppercase tracking-wide">Giornata {round.roundNumber}</h3>
+              {completed && (
+                <span className="rounded-full bg-lime/15 px-2.5 py-0.5 text-xs font-bold text-lime">Completata</span>
+              )}
             </header>
-            <ul className="divide-y divide-slate-100 text-sm">
+            <ul className="divide-y divide-line">
               {round.matches.map((match) => (
-                <MatchRow key={match.id} match={match} tournamentId={tournamentId} editable={editable} />
+                <MatchRow key={match.id} match={match} tournamentId={tournamentId} editable={false} />
               ))}
             </ul>
           </article>
