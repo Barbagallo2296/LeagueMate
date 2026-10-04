@@ -17,7 +17,7 @@ function SparkleIcon() {
 
 export default function Tabs({ items }: { items: TabItem[] }) {
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-line">
+    <nav className="no-scrollbar flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line">
       {items.map((item) => (
         <NavLink
           key={item.to}

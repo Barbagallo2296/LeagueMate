@@ -31,7 +31,7 @@ export default function ProfilePage() {
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <nav
           aria-label="Sezioni del profilo"
-          className="flex gap-2 overflow-x-auto md:w-64 md:shrink-0 md:flex-col md:overflow-visible"
+          className="no-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden md:w-64 md:shrink-0 md:flex-col md:overflow-visible"
         >
           {SECTIONS.map((section) => (
             <NavLink

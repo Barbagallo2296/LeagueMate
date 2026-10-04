@@ -1,25 +1,58 @@
 import { useQuery } from '@tanstack/react-query'
 import { errorMessage } from '../../api/client'
-import { getStandings } from '../../api/tournaments'
+import { getRounds, getStandings } from '../../api/tournaments'
 import ErrorMessage from '../../components/ErrorMessage'
 import Spinner from '../../components/Spinner'
 import Card from '../../components/ui/Card'
+import { recentForm, type Outcome } from '../../utils/form'
 import { teamInitials } from '../../utils/teams'
 
 const HEAD = 'px-2 py-2.5 text-center font-semibold'
 const CELL = 'px-2 py-3 text-center text-muted'
 const WIDE_ONLY = 'hidden sm:table-cell'
 
+const OUTCOME_STYLES: Record<Outcome, string> = {
+  V: 'bg-lime text-on-lime',
+  N: 'bg-track text-ink',
+  P: 'bg-closed text-night',
+}
+
+const OUTCOME_LABELS: Record<Outcome, string> = { V: 'vittoria', N: 'pareggio', P: 'sconfitta' }
+
+function FormDots({ outcomes }: { outcomes: Outcome[] }) {
+  if (outcomes.length === 0) return <span className="text-muted">–</span>
+  return (
+    <span
+      className="flex justify-center gap-1"
+      aria-label={`Ultimi risultati: ${outcomes.map((o) => OUTCOME_LABELS[o]).join(', ')}`}
+    >
+      {outcomes.map((outcome, index) => (
+        <span
+          key={index}
+          className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${OUTCOME_STYLES[outcome]}`}
+        >
+          {outcome}
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export default function StandingsTab({ tournamentId }: { tournamentId: number }) {
   const { data, isPending, error } = useQuery({
     queryKey: ['tournament', tournamentId, 'standings'],
     queryFn: () => getStandings(tournamentId),
+  })
+  const { data: rounds } = useQuery({
+    queryKey: ['tournament', tournamentId, 'rounds'],
+    queryFn: () => getRounds(tournamentId),
   })
 
   if (isPending) return <Spinner />
   if (error) return <ErrorMessage message={errorMessage(error)} />
 
   const started = data.some((entry) => entry.wins + entry.draws + entry.losses > 0)
+  const form = recentForm(rounds ?? [])
 
   return (
     <Card title="Classifica" padded={false}>
@@ -40,7 +73,8 @@ export default function StandingsTab({ tournamentId }: { tournamentId: number })
                   <th className={`${HEAD} ${WIDE_ONLY}`}>GF</th>
                   <th className={`${HEAD} ${WIDE_ONLY}`}>GS</th>
                   <th className={HEAD}>DR</th>
-                  <th className="py-2.5 pl-2 pr-5 text-center font-semibold">Pt</th>
+                  <th className="px-2 py-2.5 text-center font-semibold">Pt</th>
+                  <th className="hidden py-2.5 pl-2 pr-5 text-center font-semibold lg:table-cell">Forma</th>
                 </tr>
               </thead>
               <tbody>
@@ -72,8 +106,9 @@ export default function StandingsTab({ tournamentId }: { tournamentId: number })
                     <td className={CELL}>
                       {entry.goalDifference > 0 ? `+${entry.goalDifference}` : entry.goalDifference}
                     </td>
-                    <td className="py-3 pl-2 pr-5 text-center font-display text-xl font-bold text-ink">
-                      {entry.points}
+                    <td className="px-2 py-3 text-center font-display text-xl font-bold text-ink">{entry.points}</td>
+                    <td className="hidden py-3 pl-2 pr-5 lg:table-cell">
+                      <FormDots outcomes={form.get(entry.teamName) ?? []} />
                     </td>
                   </tr>
                 ))}
@@ -81,7 +116,8 @@ export default function StandingsTab({ tournamentId }: { tournamentId: number })
             </table>
           </div>
           <p className="border-t border-line px-5 py-3 text-xs text-muted">
-            G giocate · V vinte · N pareggiate · P perse · GF gol fatti · GS gol subiti · DR differenza reti
+            G giocate · V vinte · N pareggiate · P perse · GF gol fatti · GS gol subiti · DR differenza reti · Forma:
+            ultime 5 partite, dalla più vecchia alla più recente
           </p>
         </>
       )}
