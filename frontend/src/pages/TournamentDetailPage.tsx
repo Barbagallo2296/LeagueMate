@@ -6,8 +6,10 @@ import { getTournament } from '../api/tournaments'
 import ErrorMessage from '../components/ErrorMessage'
 import Spinner from '../components/Spinner'
 import StatusBadge from '../components/StatusBadge'
+import AssistantTab from './tournament/AssistantTab'
 import CalendarTab from './tournament/CalendarTab'
 import OrganizerActions from './tournament/OrganizerActions'
+import RecapsTab from './tournament/RecapsTab'
 import StandingsTab from './tournament/StandingsTab'
 import StatsTab from './tournament/StatsTab'
 import TeamsTab from './tournament/TeamsTab'
@@ -18,6 +20,8 @@ const TABS = [
   { key: 'calendar', label: 'Calendario' },
   { key: 'stats', label: 'Statistiche' },
   { key: 'teams', label: 'Squadre' },
+  { key: 'recaps', label: 'Cronache AI' },
+  { key: 'assistant', label: 'Assistente AI' },
 ] as const
 
 type TabKey = (typeof TABS)[number]['key']
@@ -84,6 +88,10 @@ export default function TournamentDetailPage() {
       {tab === 'teams' && (
         <TeamsTab tournamentId={tournamentId} canRegister={canManage && tournament.status === 'DRAFT'} />
       )}
+      {tab === 'recaps' && (
+        <RecapsTab tournamentId={tournamentId} tournamentName={tournament.name} canManage={canManage} />
+      )}
+      {tab === 'assistant' && <AssistantTab tournamentId={tournamentId} />}
     </section>
   )
 }
