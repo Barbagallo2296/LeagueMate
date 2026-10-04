@@ -7,9 +7,11 @@ import ErrorMessage from '../components/ErrorMessage'
 import Spinner from '../components/Spinner'
 import StatusBadge from '../components/StatusBadge'
 import CalendarTab from './tournament/CalendarTab'
+import OrganizerActions from './tournament/OrganizerActions'
 import StandingsTab from './tournament/StandingsTab'
 import StatsTab from './tournament/StatsTab'
 import TeamsTab from './tournament/TeamsTab'
+import { useCanManage } from './tournament/useCanManage'
 
 const TABS = [
   { key: 'standings', label: 'Classifica' },
@@ -23,6 +25,7 @@ type TabKey = (typeof TABS)[number]['key']
 export default function TournamentDetailPage() {
   const tournamentId = Number(useParams().id)
   const [tab, setTab] = useState<TabKey>('standings')
+  const canManage = useCanManage(tournamentId)
   const { data: tournament, isPending, error } = useQuery({
     queryKey: ['tournament', tournamentId],
     queryFn: () => getTournament(tournamentId),
@@ -54,6 +57,7 @@ export default function TournamentDetailPage() {
           Stagione {tournament.season} · {tournament.doubleRoundRobin ? 'Andata e ritorno' : 'Solo andata'} ·{' '}
           {tournament.pointsForWin} punti a vittoria, {tournament.pointsForDraw} a pareggio
         </p>
+        {canManage && <OrganizerActions tournament={tournament} />}
       </header>
 
       <nav className="flex flex-wrap gap-2 border-b border-slate-200">
@@ -73,9 +77,13 @@ export default function TournamentDetailPage() {
       </nav>
 
       {tab === 'standings' && <StandingsTab tournamentId={tournamentId} />}
-      {tab === 'calendar' && <CalendarTab tournamentId={tournamentId} />}
+      {tab === 'calendar' && (
+        <CalendarTab tournamentId={tournamentId} editable={canManage && tournament.status === 'ACTIVE'} />
+      )}
       {tab === 'stats' && <StatsTab tournamentId={tournamentId} />}
-      {tab === 'teams' && <TeamsTab tournamentId={tournamentId} />}
+      {tab === 'teams' && (
+        <TeamsTab tournamentId={tournamentId} canRegister={canManage && tournament.status === 'DRAFT'} />
+      )}
     </section>
   )
 }

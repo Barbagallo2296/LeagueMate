@@ -46,7 +46,24 @@ export async function getRegisteredTeams(id: number): Promise<Team[]> {
   return data
 }
 
+export async function getMyTournaments(): Promise<Tournament[]> {
+  const { data } = await api.get<Tournament[]>('/tournaments/mine')
+  return data
+}
+
 export async function createTournament(input: NewTournamentData): Promise<Tournament> {
   const { data } = await api.post<Tournament>('/tournaments', input)
   return data
+}
+
+export async function registerTeam(tournamentId: number, teamId: number): Promise<void> {
+  await api.post(`/tournaments/${tournamentId}/register-team/${teamId}`)
+}
+
+export async function generateRounds(tournamentId: number): Promise<void> {
+  await api.post(`/tournaments/${tournamentId}/generate-rounds`)
+}
+
+export async function completeTournament(tournamentId: number): Promise<void> {
+  await api.post(`/tournaments/${tournamentId}/complete`)
 }
