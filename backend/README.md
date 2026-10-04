@@ -349,7 +349,7 @@ Gli errori che nascono nella filter chain di Spring Security (token non valido, 
 
 ---
 
-## Endpoint REST — 41 totali
+## Endpoint REST — 43 totali
 
 Le liste di tornei, squadre e utenti sono **paginate**: `?page=0&size=20&sort=name,asc` (default 20 elementi, massimo 100). La risposta ha la forma `{ "content": [...], "page": { "size", "number", "totalElements", "totalPages" } }`. Il parametro `sort` accetta solo i campi ammessi da ciascun endpoint; un campo diverso restituisce `400`.
 
@@ -362,10 +362,12 @@ Le liste di tornei, squadre e utenti sono **paginate**: `?page=0&size=20&sort=na
 | POST | `/api/auth/logout` | Autenticato — revoca la sessione corrente |
 | POST | `/api/auth/logout-all` | Autenticato — revoca tutte le sessioni dell'utente |
 
-### Utenti (6)
+### Utenti (8)
 | Metodo | Endpoint | Accesso |
 |---|---|---|
 | GET | `/api/users/me` | Autenticato |
+| PUT | `/api/users/me` | Autenticato — modifica nome, cognome ed email dell'utente collegato (email unica) |
+| PUT | `/api/users/me/password` | Autenticato — richiede la password attuale; dopo il cambio revoca tutte le sessioni |
 | GET | `/api/users` | **ADMIN** |
 | GET | `/api/users/{id}` | Autenticato |
 | PUT | `/api/users/{id}/role` | **ADMIN** |
@@ -479,17 +481,23 @@ Lo stesso comando avvia MySQL 8, Ollama e il backend, insieme agli altri servizi
 
 Tutti con password `password123`:
 
-| Username | Ruolo |
-|---|---|
-| `manuel22` | ADMIN |
-| `law_organizer` | ORGANIZER |
-| `shanks_player` | USER |
-| `zoro_player` | USER |
+| Username | Ruolo | Note |
+|---|---|---|
+| `manuel22` | ADMIN | Capitano dello Straw Hat FC |
+| `law_organizer` | ORGANIZER | Organizza Grand Line Cup e New World League, co-organizzatore del Wano Trophy |
+| `smoker_organizer` | ORGANIZER | Organizza Paradise Cup e Wano Trophy, proprietario di quattro squadre |
+| `shanks_player` | USER | Capitano della Red Hair United |
+| `zoro_player` | USER | Rosa dello Straw Hat FC |
+| `nami_player` | USER | Rosa dello Straw Hat FC |
+| `sanji_player` | USER | Rosa dello Straw Hat FC |
+| `robin_player` | USER | Rosa dello Straw Hat FC (riserva) |
 
-Ogni squadra demo ha come proprietario il suo capitano: `manuel22` (Straw Hat FC), `law_organizer` (Heart Pirates e Blackbeard City), `shanks_player` (Red Hair United). I tornei di esempio sono due, entrambi con `law_organizer` come organizzatore:
+I tornei di esempio sono quattro, uno per ogni stato:
 
 - **Grand Line Cup** (id 1) — stato `DRAFT` con 4 squadre iscritte: è possibile lanciare subito `generate-rounds` e vedere il calendario generato dal metodo del cerchio.
-- **New World League** (id 2) — stato `ACTIVE` con 8 squadre (alle 4 precedenti si aggiungono Marine Ford, Kid Pirates, Whitebeard Rovers e Big Mom Pirates, di proprietà di `law_organizer`) e 7 giornate. Le giornate 1-3 sono giocate; nella giornata 4 manca solo **Whitebeard Rovers - Straw Hat FC** (partita con id `116`): inserendo quel risultato la giornata si completa e parte la cronaca AI. Le giornate 1-3 non hanno ancora una cronaca e si possono generare con il `POST` di rigenerazione.
+- **New World League** (id 2) — stato `ACTIVE` con 8 squadre e 7 giornate. Le giornate 1-3 sono giocate; nella giornata 4 manca solo **Whitebeard Rovers - Straw Hat FC** (partita con id `116`): inserendo quel risultato la giornata si completa e parte la cronaca AI. Le giornate già giocate non hanno ancora una cronaca e si possono generare con il `POST` di rigenerazione.
+- **Paradise Cup** (id 3) — stato `COMPLETED`, 4 squadre e 3 giornate tutte giocate: vince lo Straw Hat FC.
+- **Wano Trophy** (id 4) — stato `ACTIVE` con 6 squadre e 5 giornate, 2 giocate; ha due organizzatori (`smoker_organizer` e `law_organizer`).
 
 Per ripartire dai dati demo originali: `docker compose down` e poi `docker volume rm leaguemate_mysql_data` (il modello AI, nel volume `leaguemate_ollama_data`, resta scaricato).
 
@@ -524,7 +532,7 @@ In locale il backend cerca Ollama su `http://localhost:11434`. Il servizio `olla
 
 ## Testing
 
-**246 test** con JUnit 5, Mockito, Spring Security Test e MockMvc — tutti verdi.
+**260 test** con JUnit 5, Mockito, Spring Security Test e MockMvc — tutti verdi.
 **Code coverage: 95%** (requisito minimo 35%).
 
 Nessun test richiede Ollama: nei test l'AI è disattivata (`app.ai.enabled=false`) oppure il modello è simulato con Mockito o con `MockRestServiceServer`.
@@ -534,12 +542,12 @@ Nessun test richiede Ollama: nei test l'AI è disattivata (`app.ai.enabled=false
 | Classe testata | Test | Descrizione |
 |---|---|---|
 | `TournamentServiceImpl` | 45 | CRUD, **generazione calendario** (anche andata e ritorno), **classifica** (anche fino a una giornata), **statistiche**, co-organizzatori, chiusura torneo, calendario e squadre iscritte |
-| `UserServiceImpl` | 18 | Registrazione, ruoli, **profilo con autorizzazione a livello di risorsa** |
+| `UserServiceImpl` | 22 | Registrazione, ruoli, **profilo con autorizzazione a livello di risorsa**, modifica dei dati dell'account con email unica, salvataggio della nuova password |
 | `TeamServiceImpl` | 10 | CRUD completo, proprietario e capitano alla creazione, unicità nome, vincoli di cancellazione |
 | `TeamMemberServiceImpl` | 10 | Aggiunta membri, duplicati, rimozione vincolata alla squadra |
 | `GlobalExceptionHandler` | 8 | 400, 401, 404, 409, 500, token non valido e mascheramento messaggi |
 | `MatchServiceImpl` | 10 | Aggiornamento risultato, blocco su torneo non attivo, giornata inesistente, caricamento eager, **avvio della cronaca solo all'ultima partita della giornata** |
-| `AuthServiceImpl` | 6 | Registrazione con hashing, login, rinnovo, logout e logout-all |
+| `AuthServiceImpl` | 9 | Registrazione con hashing, login, rinnovo, logout e logout-all, **cambio password** (password attuale verificata, nuova diversa dalla vecchia, revoca di tutte le sessioni) |
 | `LoginRateLimitFilter` | 2 | Pulizia dei contatori inattivi del rate limit |
 | `TournamentControllerSecurityTest` | 3 | **403 con USER, 201 con ORGANIZER** (`@WebMvcTest`) |
 
@@ -548,7 +556,7 @@ Nessun test richiede Ollama: nei test l'AI è disattivata (`app.ai.enabled=false
 | Classe testata | Test | Descrizione |
 |---|---|---|
 | `RoundRecapService` | 16 | Cronaca `READY`, Ollama irraggiungibile o risposta vuota → `FAILED`, errori inattesi, AI disattivata, lettura e rigenerazione, cronache `PENDING` interrotte, generazioni contemporanee, pulizia del markdown |
-| `TournamentTools` | 9 | I 4 tool, risultati scritti a parole, nome della squadra senza maiuscole, giornata o squadra inesistente, tool sconosciuto |
+| `TournamentTools` | 10 | I 4 tool, risultati scritti a parole, nome della squadra senza maiuscole, giornata o squadra inesistente, tool sconosciuto, classifica senza partite giocate (nessuna squadra in testa) |
 | `RoundFactsBuilder` | 7 | **Formato esatto dei fatti**, vittoria in casa e in trasferta, plurali, righe facoltative, ultima giornata, parità in testa, squadra a riposo |
 | `TournamentAssistantService` | 7 | System prompt compilato, ciclo con tool, limite di 4 passaggi, Ollama irraggiungibile → `UNAVAILABLE`, AI disattivata, torneo inesistente |
 | `OpenAiCompatibleClient` | 6 | Chiave API, argomenti dei tool da stringa JSON, id mancanti, indirizzo con barra finale, errori |
@@ -561,6 +569,7 @@ Nessun test richiede Ollama: nei test l'AI è disattivata (`app.ai.enabled=false
 | Classe | Test | Descrizione |
 |---|---|---|
 | `AuthIntegrationTest` | 10 | Flusso register→login→endpoint protetto, RBAC, 401 identici, password mai esposta |
+| `AccountIntegrationTest` | 6 | Modifica dei dati dell'account, email già usata (409), dati non validi (400), cambio password con vecchio token e vecchia password rifiutati, 401 senza token |
 | `TokenAuthenticationIntegrationTest` | 10 | Token opachi, hash nel database, rotazione dei refresh token, logout, logout-all, scadenze, pulizia automatica |
 | `InputValidationIntegrationTest` | 6 | Valori al limite: lunghezze allineate alle colonne del database, password oltre il limite di BCrypt, punti incoerenti |
 | `TournamentFlowIntegrationTest` | 10 | Ciclo di vita completo del torneo end-to-end |
@@ -610,7 +619,7 @@ A ogni push su `main` e a ogni pull request GitHub Actions (`.github/workflows/c
 |---|---|
 | Codice sorgente completo | ✅ |
 | Script SQL (migrazioni Flyway in `db/migration` + dati demo in `db/demo`) | ✅ |
-| Collection Postman in `docs/` (52 richieste, 10 cartelle, compresa la cartella AI; login, refresh e logout gestiti in automatico) | ✅ |
+| Collection Postman in `docs/` (54 richieste, 10 cartelle, compresa la cartella AI; login, refresh e logout gestiti in automatico) | ✅ |
 | Script Docker (`backend/Dockerfile`, `docker-compose.yml` con Ollama e `docker-compose.gpu.yml` facoltativo, nella cartella principale) | ✅ |
 | Funzionalità AI con LLM locale (cronaca della giornata e assistente con tool calling) | ✅ |
 

@@ -826,6 +826,65 @@
           "response": []
         },
         {
+          "name": "PUT Update Current User",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"Manuel\",\n    \"lastName\": \"Barbagallo\",\n    \"email\": \"manuel@leaguemate.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Modifica nome, cognome ed email dell'utente collegato (non serve l'id: e' sempre l'utente del token). L'email deve restare unica: se appartiene a un altro utente la risposta e' 409. Lo username non si puo' modificare."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Change Password (password attuale errata)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/me/password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"currentPassword\": \"passwordSbagliata\",\n    \"newPassword\": \"nuovaPassword123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Cambio password dell'utente collegato. Richiede la password attuale: con quella sbagliata (come in questo esempio) la risposta e' 400 'Current password is incorrect' e non cambia nulla. Con la password corretta la risposta e' 204 e il backend revoca tutte le sessioni dell'utente: per questo l'esempio usa volutamente una password errata, cosi' le richieste successive della collection continuano a funzionare."
+          },
+          "response": []
+        },
+        {
           "name": "GET All Users",
           "request": {
             "method": "GET",
