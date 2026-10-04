@@ -2,7 +2,7 @@ import { Link, Outlet } from 'react-router'
 import { useAuth } from '../auth/authContext'
 
 export default function Layout() {
-  const { user, logout } = useAuth()
+  const { user, canOrganize, logout } = useAuth()
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -14,6 +14,11 @@ export default function Layout() {
           <Link to="/" className="hover:underline">
             Tornei
           </Link>
+          {canOrganize && (
+            <Link to="/tournaments/new" className="hover:underline">
+              Nuovo torneo
+            </Link>
+          )}
           <span className="ml-auto text-sm">
             {user?.username} · {user?.role}
           </span>
