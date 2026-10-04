@@ -70,6 +70,19 @@ class TournamentToolsTest {
     }
 
     @Test
+    @DisplayName("get_standings: nessuna partita giocata → nota senza posizioni, nessuna squadra in testa")
+    void standings_NoMatchesPlayed_ReturnsNote() {
+        when(tournamentService.calculateStandings(2L)).thenReturn(List.of(
+                new StandingEntry("Heart Pirates", 0, 0, 0, 0, 0, 0, 0),
+                new StandingEntry("Kid Pirates", 0, 0, 0, 0, 0, 0, 0)));
+
+        JsonNode json = run(noArguments("get_standings"));
+
+        assertFalse(json.isArray());
+        assertEquals(TournamentTools.NO_MATCHES_PLAYED, json.get("nota").asString());
+    }
+
+    @Test
     @DisplayName("get_tournament_stats: statistiche con miglior attacco già scritto")
     void stats_ReturnsSummary() {
         when(tournamentService.getTournamentStats(2L)).thenReturn(

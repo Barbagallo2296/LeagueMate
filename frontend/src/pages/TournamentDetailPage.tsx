@@ -91,7 +91,14 @@ export default function TournamentDetailPage() {
       {tab === 'recaps' && (
         <RecapsTab tournamentId={tournamentId} tournamentName={tournament.name} canManage={canManage} />
       )}
-      {tab === 'assistant' && <AssistantTab tournamentId={tournamentId} />}
+      {tab === 'assistant' &&
+        (tournament.status === 'DRAFT' ? (
+          <p className="rounded-xl bg-white p-5 text-slate-600 shadow">
+            L'assistente sarà disponibile quando il torneo inizierà e ci saranno partite da raccontare.
+          </p>
+        ) : (
+          <AssistantTab tournamentId={tournamentId} />
+        ))}
     </section>
   )
 }

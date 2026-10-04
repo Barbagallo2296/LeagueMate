@@ -29,6 +29,9 @@ public class TournamentTools {
     public static final String GET_ROUND = "get_round";
     public static final String GET_TEAM_MATCHES = "get_team_matches";
 
+    static final String NO_MATCHES_PLAYED =
+            "Nessuna partita giocata: la classifica non è ancora iniziata e nessuna squadra è in testa";
+
     private final TournamentService tournamentService;
     private final JsonMapper jsonMapper;
 
@@ -72,8 +75,13 @@ public class TournamentTools {
         }
     }
 
-    private List<Map<String, Object>> standings(Long tournamentId) {
+    private Object standings(Long tournamentId) {
         List<StandingEntry> standings = tournamentService.calculateStandings(tournamentId);
+        boolean noMatchesPlayed = standings.stream()
+                .allMatch(entry -> entry.wins() + entry.draws() + entry.losses() == 0);
+        if (noMatchesPlayed) {
+            return Map.of("nota", NO_MATCHES_PLAYED);
+        }
         List<Map<String, Object>> rows = new ArrayList<>();
         for (int i = 0; i < standings.size(); i++) {
             StandingEntry entry = standings.get(i);

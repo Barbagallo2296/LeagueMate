@@ -10,9 +10,24 @@ const MAX_LENGTH = 300
 
 const SUGGESTIONS = [
   'Chi è in testa alla classifica?',
+  'Chi è ultimo in classifica?',
   'Quale squadra ha la miglior difesa?',
+  'Quale squadra ha il miglior attacco?',
+  'Quale squadra ha perso più partite?',
+  'Quale squadra ha pareggiato più volte?',
   "Com'è andata la giornata 1?",
+  "Com'è andata l'ultima giornata giocata?",
+  'Quante partite mancano alla fine del torneo?',
+  'Quanti gol sono stati segnati in totale?',
+  'Qual è la media gol a partita?',
+  'Quante squadre partecipano al torneo?',
 ]
+
+const SUGGESTIONS_SHOWN = 3
+
+function randomSuggestions(): string[] {
+  return [...SUGGESTIONS].sort(() => Math.random() - 0.5).slice(0, SUGGESTIONS_SHOWN)
+}
 
 const TOOL_LABELS: Record<string, string> = {
   get_standings: 'Classifica',
@@ -39,6 +54,7 @@ export default function AssistantTab({ tournamentId }: { tournamentId: number })
   const historyKey = ['assistant', tournamentId]
   const askKey = ['assistant', tournamentId, 'ask']
   const [question, setQuestion] = useState('')
+  const [suggestions, setSuggestions] = useState(randomSuggestions)
 
   const { data: history = [] } = useQuery<Exchange[]>({
     queryKey: historyKey,
@@ -88,8 +104,21 @@ export default function AssistantTab({ tournamentId }: { tournamentId: number })
           placeholder="Es. Quanti punti ha lo Straw Hat FC?"
           className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-600 focus:outline-none"
         />
-        <div className="flex flex-wrap items-center gap-2">
-          {SUGGESTIONS.map((suggestion) => (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-slate-400">
+            {question.length}/{MAX_LENGTH}
+          </span>
+          <button
+            type="submit"
+            disabled={waiting || question.trim().length === 0}
+            className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+          >
+            Chiedi
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+          <span className="text-sm text-slate-500">Prova a chiedere:</span>
+          {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               type="button"
@@ -100,15 +129,12 @@ export default function AssistantTab({ tournamentId }: { tournamentId: number })
               {suggestion}
             </button>
           ))}
-          <span className="ml-auto text-xs text-slate-400">
-            {question.length}/{MAX_LENGTH}
-          </span>
           <button
-            type="submit"
-            disabled={waiting || question.trim().length === 0}
-            className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+            type="button"
+            onClick={() => setSuggestions(randomSuggestions())}
+            className="px-1 text-sm font-medium text-blue-700 hover:underline"
           >
-            Chiedi
+            Altre domande
           </button>
         </div>
         {waiting && (
