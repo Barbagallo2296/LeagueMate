@@ -140,7 +140,17 @@ AI_MODEL=nome-del-modello
 AI_API_KEY=la-tua-chiave
 ```
 
-Funziona con qualsiasi servizio compatibile con le API di OpenAI (OpenRouter, OpenAI, Groq...); per l'assistente serve un modello che supporti il *tool calling*. Con una GPU NVIDIA il modello locale diventa molto più veloce: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build`. Prompt, parametri e tempi misurati sono nella sezione [Funzionalità AI del README del backend](backend/README.md#funzionalità-ai).
+Funziona con qualsiasi servizio compatibile con le API di OpenAI (OpenRouter, OpenAI, Groq...); per l'assistente serve un modello che supporti il *tool calling*. Prompt, parametri e tempi misurati sono nella sezione [Funzionalità AI del README del backend](backend/README.md#funzionalità-ai).
+
+> **Attenzione: senza GPU l'AI può essere molto lenta.** Il modello locale parte su qualsiasi PC, ma non su tutte le configurazioni è utilizzabile: con la sola CPU i tempi dipendono molto dal processore e dalle risorse assegnate a Docker. Su un portatile con Intel Core Ultra 7 e sola CPU l'assistente ha impiegato **2-4 minuti** per risposta e la cronaca ha superato il tempo massimo di attesa del backend (180 s), finendo in `FAILED`. Sullo **stesso PC con la GPU NVIDIA** attiva le stesse operazioni hanno richiesto circa **2 secondi** (assistente) e **6 secondi** (cronaca).
+>
+> Per questo è consigliato usare una **GPU NVIDIA**:
+>
+> ```bash
+> docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+> ```
+>
+> oppure un servizio online come descritto sopra. Se si può usare solo la CPU, si può aumentare il tempo massimo di attesa con `AI_READ_TIMEOUT=600s` nel `.env`, oppure provare il modello più piccolo `AI_MODEL=qwen3.5:2b`. In ogni caso il resto dell'applicazione funziona normalmente anche quando l'AI è lenta o non disponibile.
 
 ---
 

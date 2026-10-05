@@ -291,10 +291,12 @@ Il servizio `ollama` non espone porte sull'host: lo raggiunge solo il backend da
 - Circa **3,4 GB** di disco per il modello e almeno **6 GB di RAM** assegnati a Docker.
 - Su PC poco potenti si può usare `AI_MODEL=qwen3.5:2b`.
 
-| | Con GPU (RTX 3070) | Solo CPU |
-|---|---|---|
-| Cronaca | 3-25 s | circa 25 s |
-| Assistente | circa 1 s | circa 20 s |
+| | GPU RTX 3070 (desktop) | GPU RTX PRO 1000 (portatile) | Solo CPU (desktop) | Solo CPU (portatile Core Ultra 7) |
+|---|---|---|---|---|
+| Cronaca | 3-25 s | circa 6 s | circa 25 s | oltre 180 s, va in `FAILED` |
+| Assistente | circa 1 s | circa 2 s | circa 20 s | 2-4 minuti |
+
+I tempi con la sola CPU cambiano molto da un PC all'altro, quindi la GPU è fortemente consigliata. La prima domanda dopo l'avvio è più lenta (circa 20 s anche con GPU) perché il modello finisce di caricarsi. Con la sola CPU si può alzare il tempo massimo di attesa con `AI_READ_TIMEOUT` (per esempio `600s`).
 
 ### Limiti noti
 
