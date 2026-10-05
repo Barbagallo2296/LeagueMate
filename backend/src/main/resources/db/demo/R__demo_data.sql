@@ -138,14 +138,19 @@ VALUES (5, 'smoker_organizer', 'smoker@leaguemate.com',
         'Vinsmoke', 'Sanji', 'USER'),
        (8, 'robin_player', 'robin@leaguemate.com',
         '$2a$10$ZQ0O6vOM2xUeypi/rxLoT.dqdHWXVMJO4DS6LPvZqEMdJ.T61OuOK',
-        'Nico', 'Robin', 'USER')
+        'Nico', 'Robin', 'USER'),
+       (9, 'boop', 'boop@leaguemate.com',
+        '$2a$10$ZQ0O6vOM2xUeypi/rxLoT.dqdHWXVMJO4DS6LPvZqEMdJ.T61OuOK',
+        'Lami', 'Boop', 'USER')
     ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO user_profiles (id, bio, phone_number, avatar_url, user_id)
 VALUES (5, 'Organizzatore del Wano Trophy e della Paradise Cup', '+39 333 2223334', NULL, 5),
        (6, 'Ala sinistra, la più veloce della squadra', '+39 333 5556667', NULL, 6),
        (7, 'Centrocampista, specialista dei calci piazzati', '+39 333 8889990', NULL, 7),
-       (8, 'Portiere di riserva e analista delle partite', '+39 333 3334445', NULL, 8)
+       (8, 'Portiere di riserva e analista delle partite', '+39 333 3334445', NULL, 8),
+       (9, 'Tifosa della New World League, non si perde una giornata', '+39 333 6667778',
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTiLKlCWyVsMB-_g3UhRKvMvFOfP0IW62-_8BLufQ6STg&s=10', 9)
     ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO teams (id, name, logo_url, owner_id)
