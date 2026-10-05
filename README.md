@@ -96,6 +96,8 @@ Per fermare tutto: `docker compose down`. Per ripartire dai dati demo originali:
 | `shanks_player` | `password123` | Utente | Vista di un utente semplice: consultazione, cronache e assistente |
 | `zoro_player`, `nami_player`, `sanji_player`, `robin_player` | `password123` | Utente | Giocatori nella rosa dello Straw Hat FC |
 
+**Avatar.** Nel profilo si può scegliere uno degli 8 avatar predefiniti a tema calcio (file SVG in `frontend/public/avatars/`, serviti dal frontend stesso, quindi funzionano anche senza internet) oppure incollare l'indirizzo di un'immagine esterna. Chi non sceglie nulla, come un utente appena registrato, vede le iniziali del nome. Tra gli utenti demo, `manuel22`, `law_organizer`, `shanks_player` e `zoro_player` hanno già un avatar, gli altri mostrano le iniziali.
+
 I tornei demo coprono tutti gli stati:
 
 | Torneo | Stato | Situazione |

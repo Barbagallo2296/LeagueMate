@@ -15,13 +15,13 @@ VALUES (1, 'manuel22', 'manuel@leaguemate.com',
 
 INSERT INTO user_profiles (id, bio, phone_number, avatar_url, user_id)
 VALUES (1, 'Full Stack Developer e creatore di LeagueMate', '+39 333 1234567',
-        'https://leaguemate.com/avatars/manuel.png', 1),
+        '/avatars/coppa.svg', 1),
        (2, 'Organizzatore di tornei amatoriali', '+39 333 7654321',
-        'https://leaguemate.com/avatars/law.png', 2),
+        '/avatars/fischietto.svg', 2),
        (3, 'Attaccante, capitano della Red Hair United', '+39 333 1112223',
-        'https://leaguemate.com/avatars/shanks.png', 3),
+        '/avatars/fascia.svg', 3),
        (4, 'Difensore centrale', '+39 333 4445556',
-        'https://leaguemate.com/avatars/zoro.png', 4)
+        '/avatars/maglia.svg', 4)
     ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO teams (id, name, logo_url)

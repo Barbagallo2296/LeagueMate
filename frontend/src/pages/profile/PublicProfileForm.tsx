@@ -8,8 +8,59 @@ import ErrorMessage from '../../components/ErrorMessage'
 import TextField from '../../components/TextField'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import { DEFAULT_AVATARS, isDefaultAvatar } from './defaultAvatars'
 
 const BIO_MAX = 500
+
+interface AvatarPickerProps {
+  initials: string
+  selected: string
+  onSelect: (url: string) => void
+}
+
+function optionClass(active: boolean) {
+  return `cursor-pointer rounded-full border-2 p-0.5 transition hover:scale-105 ${
+    active ? 'border-lime' : 'border-transparent hover:border-line'
+  }`
+}
+
+function AvatarPicker({ initials, selected, onSelect }: AvatarPickerProps) {
+  const usesInitials = selected === ''
+
+  return (
+    <div>
+      <span className="block text-sm font-semibold text-reading">Scegli un avatar</span>
+      <span className="mb-2 block text-xs text-muted">Clicca un'immagine e poi premi "Salva modifiche".</span>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          title="Usa le iniziali"
+          aria-label="Usa le iniziali"
+          aria-pressed={usesInitials}
+          onClick={() => onSelect('')}
+          className={optionClass(usesInitials)}
+        >
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-raised font-display font-bold text-lime">
+            {initials}
+          </span>
+        </button>
+        {DEFAULT_AVATARS.map((avatar) => (
+          <button
+            key={avatar.url}
+            type="button"
+            title={avatar.label}
+            aria-label={avatar.label}
+            aria-pressed={selected === avatar.url}
+            onClick={() => onSelect(avatar.url)}
+            className={optionClass(selected === avatar.url)}
+          >
+            <img src={avatar.url} alt="" className="h-11 w-11 rounded-full" />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function AvatarPreview({ url }: { url: string }) {
   const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading')
@@ -33,7 +84,7 @@ function AvatarPreview({ url }: { url: string }) {
         {state === 'loading' && 'Caricamento anteprima...'}
         {state === 'ok' && 'Anteprima: ecco come apparirà la tua foto.'}
         {state === 'error' &&
-          "Impossibile caricare l'immagine: controlla che l'indirizzo punti direttamente a un file .jpg, .png o .webp."}
+          "Impossibile caricare l'immagine: controlla che l'indirizzo punti direttamente a un file .jpg, .png, .webp o .svg."}
       </span>
     </div>
   )
@@ -45,6 +96,7 @@ export default function PublicProfileForm({ user, profile }: { user: User; profi
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isDirty },
     reset,
   } = useForm<ProfileData>({
@@ -64,7 +116,15 @@ export default function PublicProfileForm({ user, profile }: { user: User; profi
   })
 
   const bioLength = useWatch({ control, name: 'bio' })?.length ?? 0
-  const avatarUrl = useWatch({ control, name: 'avatarUrl' })?.trim() ?? ''
+  const typedAvatarUrl = useWatch({ control, name: 'avatarUrl' }) ?? ''
+  const avatarUrl = typedAvatarUrl.trim()
+  const initials = `${user.firstName[0] ?? ''}${user.lastName[0] ?? ''}`.toUpperCase()
+
+  register('avatarUrl', { maxLength: { value: 255, message: 'Massimo 255 caratteri' } })
+
+  function changeAvatar(url: string) {
+    setValue('avatarUrl', url, { shouldDirty: true, shouldValidate: true })
+  }
 
   return (
     <Card title="Profilo pubblico">
@@ -91,14 +151,21 @@ export default function PublicProfileForm({ user, profile }: { user: User; profi
           />
           {errors.bio && <span className="mt-1 block text-sm text-danger">{errors.bio.message}</span>}
         </label>
+        <AvatarPicker initials={initials} selected={avatarUrl} onSelect={changeAvatar} />
         <TextField
-          label="Indirizzo dell'immagine del profilo"
-          type="url"
-          placeholder="https://..."
+          label="Oppure incolla il link di una tua foto"
+          type="text"
+          inputMode="url"
+          maxLength={255}
+          placeholder="https://esempio.com/foto.jpg"
+          value={isDefaultAvatar(avatarUrl) ? '' : typedAvatarUrl}
+          onChange={(event) => changeAvatar(event.target.value)}
           error={errors.avatarUrl?.message}
-          {...register('avatarUrl', { maxLength: { value: 255, message: 'Massimo 255 caratteri' } })}
         />
-        {avatarUrl && <AvatarPreview key={avatarUrl} url={avatarUrl} />}
+        <p className="-mt-3 text-xs text-muted">
+          Il link deve aprire direttamente la foto e finire con .jpg, .png, .webp o .svg.
+        </p>
+        {avatarUrl && !isDefaultAvatar(avatarUrl) && <AvatarPreview key={avatarUrl} url={avatarUrl} />}
         <TextField
           label="Telefono"
           type="tel"
