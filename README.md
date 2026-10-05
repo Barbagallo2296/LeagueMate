@@ -64,6 +64,7 @@ LeagueMate permette di organizzare un torneo a girone all'italiana dall'iscrizio
 ### Requisiti
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (oppure Docker Engine con il plugin Compose).
 - Circa **8 GB di RAM** liberi e **5 GB di spazio** su disco (il modello AI occupa circa 3,4 GB).
+- Consigliata una **scheda video NVIDIA**: senza, l'app funziona ma le funzioni AI possono essere molto lente.
 
 ### Avvio
 
@@ -71,6 +72,12 @@ LeagueMate permette di organizzare un torneo a girone all'italiana dall'iscrizio
 git clone https://github.com/Barbagallo2296/LeagueMate.git
 cd LeagueMate
 docker compose up --build
+```
+
+**Con una scheda video NVIDIA** conviene avviare invece così: l'AI passa da minuti a pochi secondi per risposta (vedi [Funzionalità AI](#funzionalità-ai)).
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
 Poi apri **http://localhost:3000** ed entra con uno degli [utenti demo](#utenti-e-dati-demo). Le API e la loro documentazione interattiva (Swagger) sono su http://localhost:8080/swagger-ui.html.
@@ -134,7 +141,7 @@ Nessuna configurazione è obbligatoria: ogni variabile ha un valore predefinito.
 
 **Principio chiave:** è il backend a scrivere i fatti in italiano (per esempio "Marine Ford ha battuto Red Hair United 2-0 in casa") e il modello non deve mai interpretare numeri grezzi. Se l'AI non è disponibile l'applicazione funziona lo stesso.
 
-**Un modello piccolo, scelto per la didattica.** Il progetto usa `qwen3.5:4b`, un modello leggero (circa 3,4 GB) che gira su un normale PC, senza GPU e senza costi. È adatto a dimostrare il funzionamento, ma ha dei limiti: lo stile delle cronache varia e l'assistente a volte sbaglia i calcoli che fa da solo. In un'applicazione reale servirebbe un modello molto più grande e performante, su un server con GPU oppure tramite un servizio online. Il backend è già pronto per questo: basta cambiare le variabili nel `.env`, senza toccare il codice.
+**Un modello piccolo, scelto per la didattica.** Il progetto usa `qwen3.5:4b`, un modello leggero (circa 3,4 GB) e gratuito che parte su un normale PC anche senza GPU (ma in quel caso può essere molto lento, vedi sotto). È adatto a dimostrare il funzionamento, ma ha dei limiti: lo stile delle cronache varia e l'assistente a volte sbaglia i calcoli che fa da solo. In un'applicazione reale servirebbe un modello molto più grande e performante, su un server con GPU oppure tramite un servizio online. Il backend è già pronto per questo: basta cambiare le variabili nel `.env`, senza toccare il codice.
 
 ```env
 AI_PROVIDER=openai
@@ -168,7 +175,7 @@ npm install
 npm run dev
 ```
 
-Il frontend è su http://localhost:5173 e Vite inoltra le chiamate `/api` al backend su `localhost:8080`. Dopo una modifica al backend basta ricostruirlo con `docker compose up -d --build api`.
+Con una GPU NVIDIA si aggiunge `-f docker-compose.yml -f docker-compose.gpu.yml` subito dopo `docker compose`. Il frontend è su http://localhost:5173 e Vite inoltra le chiamate `/api` al backend su `localhost:8080`. Dopo una modifica al backend basta ricostruirlo con `docker compose up -d --build api`.
 
 Per avviare il backend fuori da Docker (Java 21, Maven) vedi la sezione [Avvio in locale del README del backend](backend/README.md#avvio-in-locale).
 
@@ -210,6 +217,7 @@ LeagueMate/
 │   ├── src/auth/             sessione e utente collegato
 │   ├── src/components/       componenti condivisi e libreria grafica (ui/)
 │   ├── src/pages/            pagine: home, torneo, profilo, utenti...
+│   ├── public/avatars/       avatar predefiniti (SVG)
 │   ├── Dockerfile            build multi-stage Node → nginx
 │   └── nginx.conf            sito + proxy /api verso il backend
 ├── docs/                     collection Postman e screenshot
@@ -244,7 +252,7 @@ LeagueMate/
 ## Sviluppi futuri
 
 - **Risposte dell'assistente in streaming** (Server-Sent Events), che compaiono parola per parola invece che tutte insieme.
-- **Caricamento della foto del profilo** dal computer, oggi indicata con un indirizzo: richiede un endpoint di upload con controllo di tipo e dimensione.
+- **Caricamento della foto del profilo** dal computer: oggi si sceglie un avatar predefinito o si incolla il link di un'immagine. Richiede un endpoint di upload con controllo di tipo e dimensione.
 - **Data, ora e campo delle partite**, con un calendario vero e proprio e i promemoria.
 - **Marcatori e statistiche dei giocatori**: classifica cannonieri e statistiche individuali.
 - **Notifiche** quando viene inserito un risultato o è pronta una cronaca.
