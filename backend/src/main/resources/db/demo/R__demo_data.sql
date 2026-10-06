@@ -141,7 +141,7 @@ VALUES (5, 'smoker_organizer', 'smoker@leaguemate.com',
         'Nico', 'Robin', 'USER'),
        (9, 'boop', 'boop@leaguemate.com',
         '$2a$10$ZQ0O6vOM2xUeypi/rxLoT.dqdHWXVMJO4DS6LPvZqEMdJ.T61OuOK',
-        'Lami', 'Boop', 'USER')
+        'Lami', 'Boop', 'ADMIN')
     ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO user_profiles (id, bio, phone_number, avatar_url, user_id)

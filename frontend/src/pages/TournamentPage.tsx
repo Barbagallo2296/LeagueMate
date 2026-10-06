@@ -46,13 +46,13 @@ function Progress({ tournament }: { tournament: Tournament }) {
 
 export default function TournamentPage() {
   const tournamentId = Number(useParams().id)
-  const canManage = useCanManage(tournamentId)
+  const { canManage, checking } = useCanManage(tournamentId)
   const { data: tournament, isPending, error } = useQuery({
     queryKey: ['tournament', tournamentId],
     queryFn: () => getTournament(tournamentId),
   })
 
-  if (isPending) return <Spinner />
+  if (isPending || checking) return <Spinner />
   if (error) {
     return (
       <div className="space-y-4">

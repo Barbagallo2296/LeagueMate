@@ -32,6 +32,13 @@ export function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
     },
   })
 
+  function startEditing() {
+    setHomeScore(match.homeScore?.toString() ?? '')
+    setAwayScore(match.awayScore?.toString() ?? '')
+    mutation.reset()
+    setEditing(true)
+  }
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     mutation.mutate()
@@ -90,7 +97,7 @@ export function MatchRow({ match, tournamentId, editable }: MatchRowProps) {
             ) : (
               <button
                 type="button"
-                onClick={() => setEditing(true)}
+                onClick={startEditing}
                 className="text-xs font-semibold text-lime hover:underline"
               >
                 {played ? 'Modifica risultato' : 'Inserisci risultato'}

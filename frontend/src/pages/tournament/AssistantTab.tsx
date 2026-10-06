@@ -55,6 +55,9 @@ function assistantError(error: unknown): string {
     const seconds = error.response.headers['retry-after']
     return `Hai fatto troppe domande. Riprova tra ${seconds ?? 'qualche'} secondi.`
   }
+  if (axios.isAxiosError(error) && error.response?.status === 504) {
+    return "L'assistente ci sta mettendo troppo (probabilmente l'AI gira senza GPU). Riprova più tardi."
+  }
   return errorMessage(error)
 }
 

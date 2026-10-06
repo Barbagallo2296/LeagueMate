@@ -74,6 +74,12 @@ cd LeagueMate
 docker compose up --build
 ```
 
+> Su Windows, se `git clone` si ferma con l'errore *"Filename too long"*, clonare in una cartella con un percorso corto (per esempio sul Desktop) oppure abilitare i percorsi lunghi e ripetere il clone:
+>
+> ```bash
+> git config --global core.longpaths true
+> ```
+
 **Con una scheda video NVIDIA** conviene avviare invece così: l'AI passa da minuti a pochi secondi per risposta (vedi [Funzionalità AI](#funzionalità-ai)).
 
 ```bash
@@ -102,7 +108,7 @@ Per fermare tutto: `docker compose down`. Per ripartire dai dati demo originali:
 | `smoker_organizer` | `password123` | Organizzatore | Gestione di Paradise Cup e Wano Trophy |
 | `shanks_player` | `password123` | Utente | Vista di un utente semplice: consultazione, cronache e assistente |
 | `zoro_player`, `nami_player`, `sanji_player`, `robin_player` | `password123` | Utente | Giocatori nella rosa dello Straw Hat FC |
-| `boop` | `password123` | Utente | Utente con una foto profilo presa da un link esterno |
+| `boop` | `password123` | Amministratore | Secondo amministratore, con una foto profilo presa da un link esterno |
 
 **Avatar.** Nel profilo si può scegliere uno degli 8 avatar predefiniti a tema calcio (file SVG in `frontend/public/avatars/`, serviti dal frontend stesso, quindi funzionano anche senza internet) oppure incollare l'indirizzo di un'immagine esterna. Chi non sceglie nulla, come un utente appena registrato, vede le iniziali del nome. Tra gli utenti demo, `manuel22`, `law_organizer`, `shanks_player` e `zoro_player` hanno già un avatar predefinito, `boop` usa un'immagine esterna (serve la connessione a internet per vederla) e gli altri mostrano le iniziali.
 
@@ -160,7 +166,7 @@ Funziona con qualsiasi servizio compatibile con le API di OpenAI (OpenRouter, Op
 > docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 > ```
 >
-> oppure un servizio online come descritto sopra. Se si può usare solo la CPU, si può aumentare il tempo massimo di attesa con `AI_READ_TIMEOUT=600s` nel `.env`, oppure provare il modello più piccolo `AI_MODEL=qwen3.5:2b`. In ogni caso il resto dell'applicazione funziona normalmente anche quando l'AI è lenta o non disponibile.
+> oppure un servizio online come descritto sopra. Se si può usare solo la CPU, si può aumentare il tempo massimo di attesa delle cronache con `AI_READ_TIMEOUT=600s` nel `.env` (l'assistente invece ha comunque un limite di 200 secondi, oltre il quale il sito mostra un messaggio che lo spiega), oppure provare il modello più piccolo `AI_MODEL=qwen3.5:2b`. In ogni caso il resto dell'applicazione funziona normalmente anche quando l'AI è lenta o non disponibile.
 
 ---
 
