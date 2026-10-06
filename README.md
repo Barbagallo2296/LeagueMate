@@ -138,6 +138,12 @@ Le giornate già giocate non hanno ancora una cronaca: chi gestisce il torneo pu
 
 Nessuna configurazione è obbligatoria: ogni variabile ha un valore predefinito. Per cambiarle si copia `.env.example` in `.env` e si modificano i valori (porte con `WEB_PORT`, `API_PORT`, `DB_PORT`; AI con le variabili `AI_*`). Il database è esposto sulla porta **3307**, così non si scontra con un MySQL già installato sul PC. L'elenco completo è nel [README del backend](backend/README.md#avvio-con-docker-consigliato).
 
+```bash
+cp .env.example .env
+```
+
+Su Windows (Prompt dei comandi o PowerShell) il comando è `copy .env.example .env`. Le modifiche valgono dal successivo `docker compose up`. Il file `.env` non viene salvato su git (è nel `.gitignore`), quindi può contenere anche dati personali come la chiave `AI_API_KEY` di un servizio online.
+
 ---
 
 ## Funzionalità AI
@@ -263,6 +269,7 @@ LeagueMate/
 - **Marcatori e statistiche dei giocatori**: classifica cannonieri e statistiche individuali.
 - **Notifiche** quando viene inserito un risultato o è pronta una cronaca.
 - **Altre formule di torneo**: eliminazione diretta e gironi con fase finale.
+- **Gestione completa dal sito per l'amministratore**: eliminazione di tornei e squadre e gestione dei co-organizzatori, oggi disponibili solo tramite le API (Swagger o Postman).
 
 ---
 
